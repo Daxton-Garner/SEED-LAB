@@ -20,6 +20,7 @@ lcd.color = [50, 0, 50]
 lcd.text_direction = lcd.LEFT_TO_RIGHT
 outputString = " "
 previousOutput = "."
+sendToDuino = "0"
 
 # Disctionary for aruco generation and detection
 myDict = aruco.getPredefinedDictionary(aruco.DICT_6X6_50)
@@ -64,12 +65,16 @@ while True:
         # Compare center of marker to center of screen to locate marker in capture
         if (xMarkCent < xCapCent) and (yMarkCent < yCapCent):
             outputString = "NW"
+            sendToDuino = "1"
         elif (xMarkCent < xCapCent) and (yMarkCent > yCapCent):
             outputString = "SW"
+            sendToDuino = "4"
         elif (xMarkCent > xCapCent) and (yMarkCent < yCapCent):
             outputString = "NE"
+            sendToDuino = "2"
         else:
             outputString = "SE"
+            sendToDuino = "3"
 
         # Edit the overlay display to outline the marker
         ids = ids.flatten()
@@ -79,6 +84,7 @@ while True:
     else:
         # If a marker is not found
         outputString = "No markers found"
+        sendToDuino = "0"
 
     
     # Show the overlay
