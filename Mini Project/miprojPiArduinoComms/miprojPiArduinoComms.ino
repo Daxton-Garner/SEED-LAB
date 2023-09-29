@@ -33,6 +33,19 @@ void printReceived(){
   Serial.println(sendToDuino);
 }
 
+void reveive(){
+  if (sendToDuino == 1){
+
+  } else if (sendToDuino ==2){
+
+  } else if (sendToDuino == 3){
+
+  } else if (sendToDuino == 4){
+    
+  }
+}
+
+
 void request(){
   Wire.write(reply);
   reply = 0;
