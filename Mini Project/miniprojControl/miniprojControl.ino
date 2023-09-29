@@ -17,8 +17,8 @@
 
 */
 float Kp = 60;
-float Kp_pos = 4;
-float Ki_pos = 6;
+float Kp_pos = 15;
+float Ki_pos = 50;
 
 int targetNum = 1;
 int lastTargetNum;
