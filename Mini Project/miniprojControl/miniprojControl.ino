@@ -1,3 +1,9 @@
+//Description: This code is what controls the wheel to turn to the specific angle requested using the 
+//             motors current position and some PI controllers to manage the rise time and overshoot.
+//Hardware:    You will need an Arduino Uno connected to a motor, a voltage monitor, and Raspberry Pi.
+//             The motor should have a wheel attached and the Raspberry Pi will need a camera.
+
+
 #include <Wire.h>
 #define A2 2
 #define B2 5
