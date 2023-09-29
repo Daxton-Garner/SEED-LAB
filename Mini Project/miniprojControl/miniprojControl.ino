@@ -18,9 +18,9 @@
 
 */
 bool debug = 0;
-float Kp = 60;
-float Kp_pos = 10;
-float Ki_pos = 3;
+float Kp = 1.7;
+float Kp_pos = 5;
+float Ki_pos = 0.75;
 
 int targetNum = 1;
 int lastTargetNum;
@@ -82,7 +82,7 @@ void setup() {
   // Initialize I2C
   Wire.begin(MY_ADDR);
   // Set callbacks for I2C interrupts
-  Wire.onReceive (I2Creceive);
+  Wire.onReceive(I2Creceive);
   // Send data back
   Wire.onRequest(I2Crequest);
 }
@@ -133,12 +133,19 @@ void loop() {
   }
   if (value > 255) { value = 255; }
 
+  value = value * 255 / 8;
+
   analogWrite(PWMPIN, value);
   if (motor_dir) {
     digitalWrite(DIRPIN, HIGH);
   } else {
     digitalWrite(DIRPIN, LOW);
   }
+
+  dtostrf(last_pos_rad, 3, 2, txBuf);
+  //Wire.write(txBuf);
+  Serial.println(txBuf);
+
   if (debug) {
     Serial.print(current_time);
     Serial.print("\t");
@@ -176,7 +183,7 @@ void updateTarget(char tgtCmd) {
   targetRad = 2 * PI * (float)targetCnts / 3200.0;
 }
 
-void I2Creceive(){
+void I2Creceive() {
   Wire.read();
   while (Wire.available()) {
     rxBuf[rxInd] = Wire.read();
@@ -186,7 +193,7 @@ void I2Creceive(){
 
 
 void I2Crequest() {
-  Wire.write(reply);
+  Wire.write(txBuf);
   reply = 0;
 }
 
