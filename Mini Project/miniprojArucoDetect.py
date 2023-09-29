@@ -12,8 +12,9 @@ import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
 # imports for Arduino communications
 from smbus2 import SMBus
 ARD_ADDR = 8
-i2c = board.I2C()
 i2c = SMBus(1)
+# Let camera warm up
+sleep (0.1)
 
 # lcd initialization, set columns/rows, color, text direction
 lcd_columns = 16
@@ -93,7 +94,7 @@ while True:
             sleep(0.1)
             reply = i2c.read_byte_data(ARD_ADDR, sendToDuino)
             lcd.message = "Marker in:\n NE quadrant!"
-            
+
         else:
             outputString = "SE"
             sendToDuino = "3"

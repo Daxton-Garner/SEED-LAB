@@ -34,15 +34,17 @@ void printReceived(){
 }
 
 void reveive(){
-  if (sendToDuino == 1){
+    sendToDuino = Wire.read();
+  while (wire.available()){
+    if (sendToDuino == 1){
 
-  } else if (sendToDuino ==2){
+    } else if (sendToDuino ==2){
 
-  } else if (sendToDuino == 3){
+    } else if (sendToDuino == 3){
 
-  } else if (sendToDuino == 4){
-    
-  }
+    } else if (sendToDuino == 4){
+
+  }}
 }
 
 
