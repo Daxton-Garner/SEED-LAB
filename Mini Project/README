@@ -20,7 +20,7 @@ Project summary:
     Southeast = 3
     Southwest = 4
   The Arduino utilizes localization and control to move the wheel to the correct 
-  location. <DAXON OR TREVOR NEEDS TO ADD SOMETHING HERE ABOUT HOW THIS HAPPENS>
+  location. <DAXTON OR TREVOR NEEDS TO ADD SOMETHING HERE ABOUT HOW THIS HAPPENS>
   The Arduino then communicates with the Pi to tell the pi where the wheel is 
   currently in it's rotation. This, along with the desired location, is displayed 
   on the Pi's LCD screen.
