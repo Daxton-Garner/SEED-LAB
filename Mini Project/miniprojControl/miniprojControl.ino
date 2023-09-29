@@ -1,9 +1,10 @@
+#include <Wire.h>
 #define A2 2
 #define B2 5
 #define PWMPIN 9  //Motor PWM
 #define DIRPIN 7  //Motor Direction
 #define PIN4 4
-
+#define MY_ADDR 8
 
 /*
 1   2
@@ -16,9 +17,10 @@
 4 -> 3pi/2
 
 */
-float Kp = 60;
-float Kp_pos = 15;
-float Ki_pos = 50;
+bool debug = 0;
+float Kp = 1.7;
+float Kp_pos = 5;
+float Ki_pos = 0.75;
 
 int targetNum = 1;
 int lastTargetNum;
@@ -27,7 +29,7 @@ float targetRad;
 float desired_speed;
 float integral_error = 0;
 float pos_error = 0;
-float error = 0 ;
+float error = 0;
 
 int value;
 int motor_dir = 1;
@@ -42,7 +44,10 @@ float last_time;
 float ang_velocity;
 float last_pos_rad;
 
-
+char txBuf[7];
+char rxBuf[7];
+int rxInd = 0;
+int reply = 0;
 
 void A2Change() {                            //Interrupt handler for pin A
   if (digitalRead(A2) == digitalRead(B2)) {  //Encoder direction check
@@ -74,22 +79,34 @@ void setup() {
   Serial.begin(115200);
   last_time_ms = millis();  // set up sample time variable
   start_time_ms = last_time_ms;
+  // Initialize I2C
+  Wire.begin(MY_ADDR);
+  // Set callbacks for I2C interrupts
+  Wire.onReceive(I2Creceive);
+  // Send data back
+  Wire.onRequest(I2Crequest);
 }
 
 void loop() {
 
   float pos_rad;
 
-  if (Serial.available() > 0) {
+  if (rxInd > 0) {
     // read the incoming byte:
-    char incomingByte = Serial.read();
-    if (incomingByte == 'S') {
+    char incomingByte = rxBuf[0];
+    rxInd = 0;
+    Serial.print("Read ");
+    Serial.print(incomingByte);
+    Serial.println(" from Pi");
+    updateTarget(incomingByte);
+    if (incomingByte == 'd') {
+      debug = !debug;
+    } else if (incomingByte == 'S') {
       current_time = 0.0;
       last_time_ms = millis();  // reset sample time variable
       start_time_ms = last_time_ms;
       value = 100.0;
     } else if (incomingByte == '1' or incomingByte == '2' or incomingByte == '3' or incomingByte == '4') {
-      updateTarget(incomingByte);
     }
   }
 
@@ -114,7 +131,9 @@ void loop() {
   } else {
     motor_dir = 1;
   }
-  if (value > 255) {value = 255;}
+  if (value > 255) { value = 255; }
+
+  value = value * 255 / 8;
 
   analogWrite(PWMPIN, value);
   if (motor_dir) {
@@ -123,12 +142,18 @@ void loop() {
     digitalWrite(DIRPIN, LOW);
   }
 
-  Serial.print(current_time);
-  Serial.print("\t");
-  Serial.print(value);
-  Serial.print("\t");
-  Serial.print(ang_velocity);
-  Serial.println("");
+  dtostrf(last_pos_rad, 3, 2, txBuf);
+  //Wire.write(txBuf);
+  Serial.println(txBuf);
+
+  if (debug) {
+    Serial.print(current_time);
+    Serial.print("\t");
+    Serial.print(value);
+    Serial.print("\t");
+    Serial.print(ang_velocity);
+    Serial.println("");
+  }
 
   last_pos_rad = pos_rad;
 
@@ -150,10 +175,29 @@ void updateTarget(char tgtCmd) {
     targetCnts += 1600;
   } else if (targetNum < lastTargetNum - 1) {
     targetCnts -= 1600;
-  }else if (targetNum > lastTargetNum) {
+  } else if (targetNum > lastTargetNum) {
     targetCnts += 800;
   } else if (targetNum < lastTargetNum) {
     targetCnts -= 800;
   }
   targetRad = 2 * PI * (float)targetCnts / 3200.0;
 }
+
+void I2Creceive() {
+  Wire.read();
+  while (Wire.available()) {
+    rxBuf[rxInd] = Wire.read();
+    rxInd++;
+  }
+}
+
+
+void I2Crequest() {
+  Wire.write(txBuf);
+  reply = 0;
+}
+
+// void I2Crequest(){
+//   dtostrf(last_pos_rad,3,2,txBuf);
+//   Wire.write(txBuf);
+// }
