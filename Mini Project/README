@@ -1,10 +1,10 @@
 Group 4 - Mini Project
 
 Folder Contents
-  miniProjControl Folder: 
-  miniProjPiArduinoComms Folder:
-  ArduinoCommunication:
-  Position_Controller: 
+  miniProjControl Folder: Code to control the motor so it goes to the right spot when it is told to
+  miniProjPiArduinoComms Folder: 
+  ArduinoCommunication: This file holds both the IDE code and the matlab code that we used so Matlab could read Arduino data
+  Position_Controller: This is our Simulink file with our PI controller
   ReadFromArduino:
   miniprojArucoDetect: Code for Pi to detect aruco markers and send location of 
                        markers to Arduino
