@@ -9,6 +9,11 @@ import cv2 as cv
 from cv2 import aruco
 from time import sleep
 import adafruit_character_lcd.character_lcd_rgb_i2c as character_lcd
+# imports for Arduino communications
+from smbus2 import SMBus
+ARD_ADDR = 8
+i2c = board.I2C()
+i2c = SMBus(1)
 
 # lcd initialization, set columns/rows, color, text direction
 lcd_columns = 16
@@ -61,20 +66,42 @@ while True:
         cornersArray = np.array(corners)[0][0]
         xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
         yMarkCent = (cornersArray[0][1] + cornersArray[1][1] + cornersArray[2][1] + cornersArray[3][1]) / 4
-
         # Compare center of marker to center of screen to locate marker in capture
         if (xMarkCent < xCapCent) and (yMarkCent < yCapCent):
             outputString = "NW"
             sendToDuino = "1"
+            # use I2C to communicate with Arduino
+            i2c.write_byte_data(ARD_ADDR, sendToDuino, outputString)
+            sleep(0.1)
+            reply = i2c.read_byte_data(ARD_ADDR, sendToDuino)
+            lcd.message = "Marker in:\n NW quadrant!"
+
         elif (xMarkCent < xCapCent) and (yMarkCent > yCapCent):
             outputString = "SW"
             sendToDuino = "4"
+            # use I2C to communicate with Arduino
+            i2c.write_byte_data(ARD_ADDR, sendToDuino, outputString)
+            sleep(0.1)
+            reply = i2c.read_byte_data(ARD_ADDR, sendToDuino)
+            lcd.message = "Marker in:\n SW quadrant!"
+
         elif (xMarkCent > xCapCent) and (yMarkCent < yCapCent):
             outputString = "NE"
             sendToDuino = "2"
+             # use I2C to communicate with Arduino
+            i2c.write_byte_data(ARD_ADDR, sendToDuino, outputString)
+            sleep(0.1)
+            reply = i2c.read_byte_data(ARD_ADDR, sendToDuino)
+            lcd.message = "Marker in:\n NE quadrant!"
+            
         else:
             outputString = "SE"
             sendToDuino = "3"
+            # use I2C to communicate with Arduino
+            i2c.write_byte_data(ARD_ADDR, sendToDuino, outputString)
+            sleep(0.1)
+            reply = i2c.read_byte_data(ARD_ADDR, sendToDuino)
+            lcd.message = "Marker in:\n SE quadrant!"
 
         # Edit the overlay display to outline the marker
         ids = ids.flatten()
@@ -85,6 +112,7 @@ while True:
         # If a marker is not found
         outputString = "No markers found"
         sendToDuino = "0"
+        lcd.message = "No Marker Found!"
 
     
     # Show the overlay
