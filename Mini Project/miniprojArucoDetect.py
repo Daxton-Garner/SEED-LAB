@@ -1,4 +1,10 @@
 # SEED Lab - Mini Assignment - Computer Vission Assignment 
+# 
+# This code utilizes a camera to capture Aruco markers in the frame. Based on the
+# location of the marker (NW, NE, SE, SW), a number is then returned and sent
+# to an Arduino.
+# 
+# Hardware needed: Camera attached by USB to Pi, connect Pi to Arduino using jumpers
 
 # Initialization
 import time
@@ -88,8 +94,8 @@ while True:
         cornersArray = np.array(corners)[0][0]
         xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
         yMarkCent = (cornersArray[0][1] + cornersArray[1][1] + cornersArray[2][1] + cornersArray[3][1]) / 4
-        # Compare center of marker to center of screen to locate marker in capture
         
+        # Compare center of marker to center of screen to locate marker in capture
         if (xMarkCent < xCapCent) and (yMarkCent < yCapCent):
             outputString = "NW"
             sendToDuino = 1

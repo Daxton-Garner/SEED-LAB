@@ -2,9 +2,10 @@ Group 4 - Mini Project
 
 Folder Contents
   miniProjControl Folder: Code to control the motor so it goes to the right spot when it is told to
-  miniProjPiArduinoComms Folder: 
+  miniProjPiArduinoComms Folder: This code file is what we used to help understand comminucation between
+                                 the Arduino and the pi
   ArduinoCommunication: This file holds both the IDE code and the matlab code that we used so Matlab 
-                       could read Arduino data
+                        could read Arduino data
   Position_Controller: This is our Simulink file with our PI controller
   ReadFromArduino: This is the Matlab file that comes out when you extract ArduinoCommunication
   miniprojArucoDetect: Code for Pi to detect aruco markers and send location of 
@@ -16,10 +17,10 @@ Project summary:
   returns a number corresponding to the location. This number is sent to the Arduino,
   which will then tell to which angle the wheel will spin. The Aruco locations and
   returned numbers are as follows:
-    Northwest = 1
-    Northeast = 2
-    Southeast = 3
-    Southwest = 4
+    Northwest = 1, go to 
+    Northeast = 2, go to 
+    Southeast = 3, go to 
+    Southwest = 4, go to 
   The Arduino utilizes localization and control to move the wheel to the correct 
   location. By using the motor's current position the arduino is able to calculate
   its needed angular velocity. This velocity will ramp up and then slow down once
