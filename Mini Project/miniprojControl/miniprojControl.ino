@@ -4,13 +4,14 @@
 //             The motor should have a wheel attached and the Raspberry Pi will need a camera.
 
 
-#include <Wire.h>
+#include <Wire.h> //This is our Pi communication library
 #define A2 2
 #define B2 5
 #define PWMPIN 9  //Motor PWM
 #define DIRPIN 7  //Motor Direction
 #define PIN4 4
 #define MY_ADDR 8
+// This is defining all our pins
 
 /*
 1   2
@@ -24,9 +25,9 @@
 
 */
 bool debug = 0;
-float Kp = 1.7;
-float Kp_pos = 5;
-float Ki_pos = 0.75;
+float Kp = 1.7; // Our gain we found in our insitiall simulink
+float Kp_pos = 5; // The proportional gain
+float Ki_pos = 0.75; // the intergral gain
 
 int targetNum = 1;
 int lastTargetNum;
