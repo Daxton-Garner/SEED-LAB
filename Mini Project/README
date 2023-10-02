@@ -10,6 +10,7 @@ Folder Contents
   ReadFromArduino: This is the Matlab file that comes out when you extract ArduinoCommunication
   miniprojArucoDetect: Code for Pi to detect aruco markers and send location of 
                        markers to Arduino
+  Matlab Documentation: Here is our documentation on the required material from our SIMULINK control design
 
 Project summary:
   This project uses Aruco markers to tell a wheel where to spin to. A raspberry pi
