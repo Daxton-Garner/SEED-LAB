@@ -1,10 +1,4 @@
 # SEED Lab - Mini Assignment - Computer Vission Assignment 
-# 
-# This code utilizes a camera to capture Aruco markers in the frame. Based on the
-# location of the marker (NW, NE, SE, SW), a number is then returned and sent
-# to an Arduino.
-# 
-# Hardware needed: Camera attached by USB to Pi, connect Pi to Arduino using jumpers
 
 # Initialization
 import time
@@ -47,28 +41,35 @@ capture.set(cv.CAP_PROP_FRAME_WIDTH, capWidth)
 
 i2c = SMBus(1)
 
+change = False
+sendToDuinoLast = -1
 # Threading function for LCD screen - improves I2C speed 
 def myFunction():
     # LCD screen initialization
     lcd_columns = 16
     lcd_rows = 2
     i2c = board.I2C()
-    lcd.color = [50, 0, 50]
     lcd = character_lcd.Character_LCD_RGB_I2C(i2c, lcd_columns, lcd_rows)
+    lcd.color = [50, 0, 50]
     lcd.clear()
     # Loop to find if LCD screen needs to change output
     while True:
-        if not q.empty():
+        if change:
             gotSomething = q.get()
-            print("I got: ()".format (gotSomething))
+            #print ("I got ", gotSomething)
             if (gotSomething == 1):
                 lcd.message = "Marker in the\n NW corner!"
+                lcd.color = [255,0,0]
             elif (gotSomething == 2):
                 lcd.message = "Marker in the\n NE corner!"
+                lcd.color = [0,255,0]
+
             elif (gotSomething == 3):
                 lcd.message = "Marker in the\n SE corner!"
+                lcd.color = [0,0,255]
             elif (gotSomething == 4):
                 lcd.message = "Marker in the\n SW corner!"
+                lcd.color = [50,0,50]
             else:
                 lcd.message = "No Marker Found!\n"
                 
@@ -94,45 +95,47 @@ while True:
         cornersArray = np.array(corners)[0][0]
         xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
         yMarkCent = (cornersArray[0][1] + cornersArray[1][1] + cornersArray[2][1] + cornersArray[3][1]) / 4
-        
         # Compare center of marker to center of screen to locate marker in capture
+        
         if (xMarkCent < xCapCent) and (yMarkCent < yCapCent):
             outputString = "NW"
             sendToDuino = 1
-            q.put(sendToDuino)
             # use I2C to communicate with Arduino
             i2c.write_byte_data(ARD_ADDR,offset,sendToDuino)
              
         elif (xMarkCent < xCapCent) and (yMarkCent > yCapCent):
             outputString = "SW"
             sendToDuino = 4
-            q.put(sendToDuino)
             # use I2C to communicate with Arduino
             i2c.write_byte_data(ARD_ADDR,offset,sendToDuino)
 
         elif (xMarkCent > xCapCent) and (yMarkCent < yCapCent):
             outputString = "NE"
             sendToDuino = 2
-            q.put(sendToDuino)
              # use I2C to communicate with Arduino
             i2c.write_byte_data(ARD_ADDR,offset,sendToDuino)
             
         else:
             outputString = "SE"
             sendToDuino = 3
-            q.put(sendToDuino)
             # use I2C to communicate with Arduino
             i2c.write_byte_data(ARD_ADDR,offset,sendToDuino)
-
+        #print(sendToDuino,sendToDuinoLast)
+        if (sendToDuino != sendToDuinoLast):
+            q.put(sendToDuino)
+            change = True
+        else:
+            change = False
+        sendToDuinoLast = sendToDuino
 
         # Edit the overlay display to outline the marker
         ids = ids.flatten()
         for (outline, id) in zip(corners, ids):
             markerCorners = outline.reshape((4,2))
             overlay = cv.putText(overlay, str(id), (int(markerCorners[0,0]),int(markerCorners[0,1])-15),cv.FONT_HERSHEY_SIMPLEX,0.5,(255,0,0),2)
-    else:
-        sendToDuino = "0"
-      
+    #else:
+        #sendToDuino = 0
+        #q.put(sendToDuino)
 
     # Show the overlay
     cv.imshow("overlay", overlay)

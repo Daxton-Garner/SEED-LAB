@@ -25,7 +25,7 @@
 
 */
 bool debug = 0;
-float Kp = 1.7; // Our gain we found in our insitiall simulink
+float Kp = 4; // 1.7 was Our gain we found in our insitiall simulink
 float Kp_pos = 5; // The proportional gain
 float Ki_pos = 0.75; // the intergral gain
 
@@ -114,7 +114,7 @@ void loop() {
       start_time_ms = last_time_ms;
       value = 100.0;
     } 
-    //else if (incomingByte == '1' or incomingByte == '2' or incomingByte == '3' or incomingByte == '4') { }
+    else if (incomingByte == '1' or incomingByte == '2' or incomingByte == '3' or incomingByte == '4') { }
   }
 
   float pos_rad;
@@ -138,9 +138,10 @@ void loop() {
   } else {
     motor_dir = 1;
   }
+  
+  value = value * 255 / 8; //Scale control loop output to PWM
   if (value > 255) { value = 255; } //Cap PI controller output at 255
 
-  value = value * 255 / 8; //Scale control loop output to PWM
 
   analogWrite(PWMPIN, value); //Control direction pin
   if (motor_dir) {
@@ -176,17 +177,17 @@ void updateTarget(char tgtCmd) {
   lastTargetNum = targetNum; //
   targetNum = tgtCmd - '0'; //Char to int
   if (targetNum == 1 && lastTargetNum == 4) { // 4 to 1 transition
-    targetCnts += 800;
+    targetCnts -= 800;
   } else if (targetNum == 4 && lastTargetNum == 1) { // 1 to 4 transition
-    targetCnts -= 800;
-  } else if (targetNum > lastTargetNum + 1) { // 1 to 3 transition and 2 to 4 transition
-    targetCnts += 1600;
-  } else if (targetNum < lastTargetNum - 1) { //3 to 1 transition and 4 to 2 transition
-    targetCnts -= 1600;
-  } else if (targetNum > lastTargetNum) { //1 to 2, 2 to 3, 3 to 4 transitions
     targetCnts += 800;
-  } else if (targetNum < lastTargetNum) { //4 to 3, 3 to 2, 2 to 1 transitions
+  } else if (targetNum > lastTargetNum + 1) { // 1 to 3 transition and 2 to 4 transition
+    targetCnts -= 1600;
+  } else if (targetNum < lastTargetNum - 1) { //3 to 1 transition and 4 to 2 transition
+    targetCnts += 1600;
+  } else if (targetNum > lastTargetNum) { //1 to 2, 2 to 3, 3 to 4 transitions
     targetCnts -= 800;
+  } else if (targetNum < lastTargetNum) { //4 to 3, 3 to 2, 2 to 1 transitions
+    targetCnts += 800;
   }
   targetRad = 2 * PI * (float)targetCnts / 3200.0; //Convert to radians for PI loop
 }
@@ -202,6 +203,6 @@ void I2Creceive() {
 
 // Acknowledge pi communication requests
 void I2Crequest() {
-  Wire.write(txBuf);
+  Wire.write(reply);
   reply = 0;
 }
