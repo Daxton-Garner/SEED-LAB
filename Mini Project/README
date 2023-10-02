@@ -17,10 +17,10 @@ Project summary:
   returns a number corresponding to the location. This number is sent to the Arduino,
   which will then tell to which angle the wheel will spin. The Aruco locations and
   returned numbers are as follows:
-    Northwest = 1, go to 
-    Northeast = 2, go to 
-    Southeast = 3, go to 
-    Southwest = 4, go to 
+    Northwest = 1, go to pi
+    Northeast = 2, go to 3pi/2
+    Southeast = 3, go to 0
+    Southwest = 4, go to pi/2
   The Arduino utilizes localization and control to move the wheel to the correct 
   location. By using the motor's current position the arduino is able to calculate
   its needed angular velocity. This velocity will ramp up and then slow down once
