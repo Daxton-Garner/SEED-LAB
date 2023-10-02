@@ -95,62 +95,62 @@ void setup() {
 
 void loop() {
 
-  float pos_rad;
 
-  if (rxInd > 0) {
+
+  if (rxInd > 0) { //Check for incoming data
     // read the incoming byte:
-    char incomingByte = rxBuf[0];
-    rxInd = 0;
+    char incomingByte = rxBuf[0]; //Assumes only one character will be transmitted
+    rxInd = 0; //Resets indication that buffer has data
     Serial.print("Read ");
     Serial.print(incomingByte);
     Serial.println(" from Pi");
-    updateTarget(incomingByte);
-    if (incomingByte == 'd') {
+    updateTarget(incomingByte); //Update target location for PI controller
+    if (incomingByte == 'd') { //Toggle debug prints
       debug = !debug;
-    } else if (incomingByte == 'S') {
+    } else if (incomingByte == 'S') { //Reset timer and full throttle motor - for parameter tuning
       current_time = 0.0;
       last_time_ms = millis();  // reset sample time variable
       start_time_ms = last_time_ms;
       value = 100.0;
-    } else if (incomingByte == '1' or incomingByte == '2' or incomingByte == '3' or incomingByte == '4') {
-    }
+    } 
+    //else if (incomingByte == '1' or incomingByte == '2' or incomingByte == '3' or incomingByte == '4') { }
   }
 
+  float pos_rad;
 
-
-  current_time = (float)(last_time_ms - start_time_ms) / 1000;
+  current_time = (float)(last_time_ms - start_time_ms) / 1000; //Current time (sec)
 
   pos_rad = 2 * PI * (float)encoderCounts / 3200.0;  //Convert positions from steps to radians
 
-  ang_velocity = (pos_rad - last_pos_rad) / (current_time - last_time);
+  ang_velocity = (pos_rad - last_pos_rad) / (current_time - last_time); //Calculate angular velocity
 
 
-  pos_error = targetRad - pos_rad;
-  integral_error = integral_error + pos_error * ((float)desired_Ts_ms / 1000);
-  desired_speed = Kp_pos * pos_error + Ki_pos * integral_error;
-  error = desired_speed - ang_velocity;
-  value = Kp * error;
+  pos_error = targetRad - pos_rad;  //Calc position error
+  integral_error = integral_error + pos_error * ((float)desired_Ts_ms / 1000); //Discrete integration (just a sum)
+  desired_speed = Kp_pos * pos_error + Ki_pos * integral_error; //Calc desired speed
+  error = desired_speed - ang_velocity; //Velocity error
+  value = Kp * error; //Final PWM value calculation
 
-  if (value < 0) {
+  if (value < 0) { //Translate negative pwm value to reversed motor direction
     value *= -1;
     motor_dir = 0;
   } else {
     motor_dir = 1;
   }
-  if (value > 255) { value = 255; }
+  if (value > 255) { value = 255; } //Cap PI controller output at 255
 
-  value = value * 255 / 8;
+  value = value * 255 / 8; //Scale control loop output to PWM
 
-  analogWrite(PWMPIN, value);
+  analogWrite(PWMPIN, value); //Control direction pin
   if (motor_dir) {
     digitalWrite(DIRPIN, HIGH);
   } else {
     digitalWrite(DIRPIN, LOW);
   }
 
-  dtostrf(last_pos_rad, 3, 2, txBuf);
+  dtostrf(last_pos_rad, 3, 2, txBuf); //Float to string for reporting back to pi -Defunct
   //Wire.write(txBuf);
-  Serial.println(txBuf);
+  Serial.println(txBuf); //Alt Debug
 
   if (debug) {
     Serial.print(current_time);
@@ -170,25 +170,27 @@ void loop() {
   last_time = current_time;
 }
 
+//Translate the previous target and current target to a step target adjustment 
 void updateTarget(char tgtCmd) {
-  lastTargetNum = targetNum;
-  targetNum = tgtCmd - '0';
-  if (targetNum == 1 && lastTargetNum == 4) {
+  lastTargetNum = targetNum; //
+  targetNum = tgtCmd - '0'; //Char to int
+  if (targetNum == 1 && lastTargetNum == 4) { // 4 to 1 transition
     targetCnts += 800;
-  } else if (targetNum == 4 && lastTargetNum == 1) {
+  } else if (targetNum == 4 && lastTargetNum == 1) { // 1 to 4 transition
     targetCnts -= 800;
-  } else if (targetNum > lastTargetNum + 1) {
+  } else if (targetNum > lastTargetNum + 1) { // 1 to 3 transition and 2 to 4 transition
     targetCnts += 1600;
-  } else if (targetNum < lastTargetNum - 1) {
+  } else if (targetNum < lastTargetNum - 1) { //3 to 1 transition and 4 to 2 transition
     targetCnts -= 1600;
-  } else if (targetNum > lastTargetNum) {
+  } else if (targetNum > lastTargetNum) { //1 to 2, 2 to 3, 3 to 4 transitions
     targetCnts += 800;
-  } else if (targetNum < lastTargetNum) {
+  } else if (targetNum < lastTargetNum) { //4 to 3, 3 to 2, 2 to 1 transitions
     targetCnts -= 800;
   }
-  targetRad = 2 * PI * (float)targetCnts / 3200.0;
+  targetRad = 2 * PI * (float)targetCnts / 3200.0; //Convert to radians for PI loop
 }
 
+//Handle I2C reception from pi
 void I2Creceive() {
   Wire.read();
   while (Wire.available()) {
@@ -197,13 +199,8 @@ void I2Creceive() {
   }
 }
 
-
+// Acknowledge pi communication requests
 void I2Crequest() {
   Wire.write(txBuf);
   reply = 0;
 }
-
-// void I2Crequest(){
-//   dtostrf(last_pos_rad,3,2,txBuf);
-//   Wire.write(txBuf);
-// }
