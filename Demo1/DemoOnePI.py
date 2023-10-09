@@ -16,9 +16,6 @@ from smbus2 import SMBus
 from random import random
 
 # Variable creation
-ARD_ADDR = 8
-offset = 0
-sendToDuino = 0
 q = queue.Queue()
 
 # Disctionary for aruco generation and detection
@@ -41,7 +38,7 @@ xCapCent = capWidth/2
 yCapCent = capHeight / 2
 capture.set(cv.CAP_PROP_FRAME_WIDTH, capWidth)
 
-i2c = SMBus(1)
+#i2c = SMBus(1)
 
 change = False
 sendToDuinoLast = -1
@@ -58,21 +55,11 @@ def myFunction():
     while True:
         if change:
             gotSomething = q.get()
-            #print ("I got ", gotSomething)
-            if (gotSomething == 1):
-                lcd.message = "Marker in the\n NW corner!"
-                lcd.color = [255,0,0]
-            elif (gotSomething == 2):
-                lcd.message = "Marker in the\n NE corner!"
-                lcd.color = [0,255,0]
-
-            elif (gotSomething == 3):
-                lcd.message = "Marker in the\n SE corner!"
-                lcd.color = [0,0,255]
-            elif (gotSomething == 4):
-                lcd.message = "Marker in the\n SW corner!"
-                lcd.color = [50,0,50]
+            if(gotSomething != 0):
+                lcd.message = "Theta is:\n" , Theta
+                lcd.color = [0,150, 50]
             else:
+                lcd.color = [255,0,0]
                 lcd.message = "No Marker Found!\n"
                 
 myThread = threading.Thread(target=myFunction,args=())
@@ -105,49 +92,22 @@ while True:
         # In equation DiffHypot = b
         DiffHypot = math.sqrt((DiffX*DiffX)+(DiffY*DiffY))
         # To figure out: xMark Center is not right value for half width of Arcuio marker
-        Theta = HalfFeildView*(DiffHypot/(xMarkCent))
+        CValue= abs(cornersArray[0][0]-xMarkCent)
+        Theta = HalfFeildView*(DiffHypot/CValue)
 
-
-
-        if (xMarkCent < xCapCent) and (yMarkCent < yCapCent):
-            outputString = "NW"
-            sendToDuino = 1
-            # use I2C to communicate with Arduino
-            i2c.write_byte_data(ARD_ADDR,offset,sendToDuino)
-             
-        elif (xMarkCent < xCapCent) and (yMarkCent > yCapCent):
-            outputString = "SW"
-            sendToDuino = 4
-            # use I2C to communicate with Arduino
-            i2c.write_byte_data(ARD_ADDR,offset,sendToDuino)
-
-        elif (xMarkCent > xCapCent) and (yMarkCent < yCapCent):
-            outputString = "NE"
-            sendToDuino = 2
-             # use I2C to communicate with Arduino
-            i2c.write_byte_data(ARD_ADDR,offset,sendToDuino)
-            
-        else:
-            outputString = "SE"
-            sendToDuino = 3
-            # use I2C to communicate with Arduino
-            i2c.write_byte_data(ARD_ADDR,offset,sendToDuino)
         #print(sendToDuino,sendToDuinoLast)
-        if (sendToDuino != sendToDuinoLast):
-            q.put(sendToDuino)
+        if (Theta != ThetaLast):
+            q.put(Theta)
             change = True
         else:
             change = False
-        sendToDuinoLast = sendToDuino
+        ThetaLast = Theta
 
         # Edit the overlay display to outline the marker
         ids = ids.flatten()
         for (outline, id) in zip(corners, ids):
             markerCorners = outline.reshape((4,2))
             overlay = cv.putText(overlay, str(id), (int(markerCorners[0,0]),int(markerCorners[0,1])-15),cv.FONT_HERSHEY_SIMPLEX,0.5,(255,0,0),2)
-    #else:
-        #sendToDuino = 0
-        #q.put(sendToDuino)
 
     # Show the overlay
     cv.imshow("overlay", overlay)
