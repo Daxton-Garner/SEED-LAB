@@ -17,6 +17,8 @@ from random import random
 
 # Variable creation
 q = queue.Queue()
+change = False
+ThetaLast = -1
 
 # Disctionary for aruco generation and detection
 myDict = aruco.getPredefinedDictionary(aruco.DICT_6X6_50)
@@ -40,8 +42,6 @@ capture.set(cv.CAP_PROP_FRAME_WIDTH, capWidth)
 
 si2c = SMBus(1)
 
-change = False
-ThetaLast = -1
 # Threading function for LCD screen - improves I2C speed 
 def myFunction():
     # LCD screen initialization
@@ -86,23 +86,22 @@ while True:
         xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
         yMarkCent = (cornersArray[0][1] + cornersArray[1][1] + cornersArray[2][1] + cornersArray[3][1]) / 4
         # Compare center of marker to center of screen to locate marker in capture
-
-        # NEW CODE : ) 
+ 
         DiffX = xCapCent-xMarkCent
         DiffY = yCapCent-yMarkCent
-        # In equation DiffHypot = b
         DiffHypot = math.sqrt((DiffX*DiffX)+(DiffY*DiffY))
-        # To figure out: xMark Center is not right value for half width of Arcuio marker
         CValue= abs(cornersArray[0][0]-xMarkCent)
         Theta = HalfFeildView*(DiffHypot/CValue)
+        round(Theta,2) 
 
-        #print(sendToDuino,sendToDuinoLast)
+        # Loop to see if Theta has changed or not
         if (Theta != ThetaLast):
             q.put(Theta)
             change = True
         else:
             change = False
-        ThetaLast = Theta
+            ThetaLast = Theta
+            q.put(0)
 
         # Edit the overlay display to outline the marker
         ids = ids.flatten()
@@ -121,5 +120,3 @@ while True:
 # Once out of while, release the capture and destroy windows
 capture.release()
 cv.destroyAllWindows()
-
-                                 
