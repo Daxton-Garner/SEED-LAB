@@ -38,10 +38,10 @@ xCapCent = capWidth/2
 yCapCent = capHeight / 2
 capture.set(cv.CAP_PROP_FRAME_WIDTH, capWidth)
 
-#i2c = SMBus(1)
+si2c = SMBus(1)
 
 change = False
-sendToDuinoLast = -1
+ThetaLast = -1
 # Threading function for LCD screen - improves I2C speed 
 def myFunction():
     # LCD screen initialization
@@ -56,7 +56,8 @@ def myFunction():
         if change:
             gotSomething = q.get()
             if(gotSomething != 0):
-                lcd.message = "Theta is:\n" , Theta
+                ToPrint = str(Theta)
+                lcd.message = ToPrint
                 lcd.color = [0,150, 50]
             else:
                 lcd.color = [255,0,0]
