@@ -16,27 +16,32 @@
 #define PIN4 4
 #define MY_ADDR 8
 
-bool debug = 1;
+bool debug = 0;
+bool turnComplete = 0;
+int stallCount = 0;
 float Kp = 4;        // 1.7 was Our gain we found in our insitiall simulink
 float Kp_pos = 1;    // The proportional gain
 float Ki_pos = 2.5;  // the intergral gain
 
+float targetdeg = 90;
+float targetdistft = 1;  //Circumfrance of wheel 47.1 cm or 0.471 m
 
-float targetdistft = 7;  //Circumfrance of wheel 47.1 cm or 0.471 m
 float targetdistm;
+float targetrotrad = targetdeg * 3.14159 / 180.0;
+float targetrotm = targetrotrad * 0.271;  //Wheel dist is 27.1cm aka 0.271m. Used to be a 0.5 here but I dropped it becuase it did exactly half what I asked
 
 float wheelCir = 0.471;
 float targetRad;
 float desired_speed[2];
-float integral_error[2] = {0,0};
-float pos_error[2] = {0,0};
-float error[2] = {0,0};
+float integral_error[2] = { 0, 0 };
+float pos_error[2] = { 0, 0 };
+float error[2] = { 0, 0 };
 
 int value[2];
-int motor_dir[2] = {1,1};
+int motor_dir[2] = { 1, 1 };
 long encoderCounts[2];
-long encoderCountsL = 0; //Remove
-long encoderCountsR = 0; //Remove
+long encoderCountsL = 0;  //Remove
+long encoderCountsR = 0;  //Remove
 int lastA2, lastB2, lastA1, lastB1;
 unsigned long desired_Ts_ms = 10;  // desired sample time in milliseconds
 unsigned long last_time_ms;
@@ -49,7 +54,7 @@ float last_pos_rad[2];
 
 void A2Change() {                            //Interrupt handler for pin A
   if (digitalRead(A2) == digitalRead(B2)) {  //Encoder direction check
-    encoderCounts[0] -= 2;                     //Adjusts for changes made during periodic reporting
+    encoderCounts[0] -= 2;                   //Adjusts for changes made during periodic reporting
   } else {
     encoderCounts[0] += 2;
   }
@@ -59,7 +64,7 @@ void A2Change() {                            //Interrupt handler for pin A
 
 void A1Change() {                            //Interrupt handler for pin A
   if (digitalRead(A1) == digitalRead(B1)) {  //Encoder direction check
-    encoderCounts[1] += 2;                     //Adjusts for changes made during periodic reporting
+    encoderCounts[1] += 2;                   //Adjusts for changes made during periodic reporting
   } else {
     encoderCounts[1] -= 2;
   }
@@ -88,28 +93,30 @@ void setup() {
   pinMode(PIN4, OUTPUT);
   digitalWrite(PIN4, HIGH);
 
-  targetdistm = 0.3048 * targetdistft;
-
-  targetRad = (2 * PI) * (targetdistm / wheelCir);
+  targetRad = (2 * PI) * (targetrotm / wheelCir);
 }
 
 void loop() {
   float pos_rad[2];
 
+  
+
   current_time = (float)(last_time_ms - start_time_ms) / 1000;  //Current time (sec)
 
   for (int i = 0; i < 2; i++) {
-    pos_rad[i] = 2 * PI * (float)encoderCounts[i] / 3200.0;                     //Convert positions from steps to radians
+    pos_rad[i] = 2 * PI * (float)encoderCounts[i] / 3200.0;     //Convert positions from steps to radians
+    //if (!turnComplete && i == 1) { pos_rad[i] = pos_rad[i]*(-1);} //Make one wheel go backwards during turn
+
     ang_velocity[i] = (pos_rad[i] - last_pos_rad[i]) / (current_time - last_time);  //Calculate angular velocity
+    if (!turnComplete && i == 1) { pos_error[i] = (-1)*targetRad - pos_rad[i];   }
+    else { pos_error[i] = targetRad - pos_rad[i]; }
 
-
-    pos_error[i] = targetRad - pos_rad[i];                                              //Calc position error
     integral_error[i] = integral_error[i] + pos_error[i] * ((float)desired_Ts_ms / 1000);  //Discrete integration (just a sum)
     //Serial.println(integral_error[i]);
     if (integral_error[i] > 1.5) { integral_error[i] = 1.5; }
     desired_speed[i] = Kp_pos * pos_error[i] + Ki_pos * integral_error[i];  //Calc desired speed
     error[i] = desired_speed[i] - ang_velocity[i];                          //Velocity error
-    value[i] = Kp * error[i];                                            //Final PWM value calculation
+    value[i] = Kp * error[i];                                               //Final PWM value calculation
 
     if (value[i] < 0) {  //Translate negative pwm value to reversed motor direction
       value[i] *= -1;
@@ -147,6 +154,26 @@ void loop() {
     Serial.print("\t");
     Serial.print(encoderCounts[1]);
     Serial.println("");
+  }
+
+  if (ang_velocity[0] + ang_velocity[1] < 0.01) {
+    stallCount++;
+  }
+  else {
+    stallCount = 0;
+  }
+  if ((stallCount >= 1000 || targetdeg == 0)&& !turnComplete) {
+    Serial.println("Turn Complete");
+    turnComplete = 1;
+    encoderCounts[0] = 0;
+    encoderCounts[1] = 0;
+    integral_error[0] = 0;
+    integral_error[1] = 0;
+    pos_rad[0] = 0;
+    pos_rad[1] = 0;
+    targetdistm = 0.3048 * targetdistft;
+    targetRad = (2 * PI) * (targetdistm / wheelCir);
+
   }
 
   last_pos_rad[0] = pos_rad[0];
