@@ -23,12 +23,12 @@ float Kp = 4;        // 1.7 was Our gain we found in our insitiall simulink
 float Kp_pos = 1;    // The proportional gain
 float Ki_pos = 2.5;  // the intergral gain
 
-float targetdeg = 90;
-float targetdistft = 1;  //Circumfrance of wheel 47.1 cm or 0.471 m
+float targetdeg = 270.0;
+float targetdistft = 3;  //Circumfrance of wheel 47.1 cm or 0.471 m
 
 float targetdistm;
-float targetrotrad = targetdeg * 3.14159 / 180.0;
-float targetrotm = targetrotrad * 0.271;  //Wheel dist is 27.1cm aka 0.271m. Used to be a 0.5 here but I dropped it becuase it did exactly half what I asked
+//float targetrotrad = targetdeg * 3.14159 / 180.0;
+float targetrotm = (targetdeg / 360.0) * (0.685 * PI);  //Wheel dist is 27.1cm aka 0.271m. Used to be a 0.5 here but I dropped it becuase it did exactly half what I asked
 
 float wheelCir = 0.471;
 float targetRad;
@@ -40,8 +40,6 @@ float error[2] = { 0, 0 };
 int value[2];
 int motor_dir[2] = { 1, 1 };
 long encoderCounts[2];
-long encoderCountsL = 0;  //Remove
-long encoderCountsR = 0;  //Remove
 int lastA2, lastB2, lastA1, lastB1;
 unsigned long desired_Ts_ms = 10;  // desired sample time in milliseconds
 unsigned long last_time_ms;
@@ -114,6 +112,7 @@ void loop() {
     integral_error[i] = integral_error[i] + pos_error[i] * ((float)desired_Ts_ms / 1000);  //Discrete integration (just a sum)
     //Serial.println(integral_error[i]);
     if (integral_error[i] > 1.5) { integral_error[i] = 1.5; }
+    if (integral_error[i] < -1.5) { integral_error[i] = -1.5; }
     desired_speed[i] = Kp_pos * pos_error[i] + Ki_pos * integral_error[i];  //Calc desired speed
     error[i] = desired_speed[i] - ang_velocity[i];                          //Velocity error
     value[i] = Kp * error[i];                                               //Final PWM value calculation
@@ -162,7 +161,7 @@ void loop() {
   else {
     stallCount = 0;
   }
-  if ((stallCount >= 1000 || targetdeg == 0)&& !turnComplete) {
+  if ((stallCount >= 500 || targetdeg == 0)&& !turnComplete) {
     Serial.println("Turn Complete");
     turnComplete = 1;
     encoderCounts[0] = 0;
