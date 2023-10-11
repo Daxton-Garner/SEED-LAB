@@ -34,10 +34,10 @@ capture = cv.VideoCapture(0)
 sleep (0.1) 
 # Set dimensions of the capture and find the center of the window
 capWidth = 640
-HalfFeildView = capWidth/2
 capHeight = 480
 xCapCent = capWidth/2
 yCapCent = capHeight / 2
+HalfFeildView = 54.8/2
 capture.set(cv.CAP_PROP_FRAME_WIDTH, capWidth)
 
 si2c = SMBus(1)
@@ -61,7 +61,7 @@ def myFunction():
                 lcd.color = [0,150, 50]
             else:
                 lcd.color = [255,0,0]
-                lcd.message = "No Marker Found!\n"
+                lcd.message = "\n"
                 
 myThread = threading.Thread(target=myFunction,args=())
 myThread.start()
@@ -85,14 +85,16 @@ while True:
         cornersArray = np.array(corners)[0][0]
         xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
         yMarkCent = (cornersArray[0][1] + cornersArray[1][1] + cornersArray[2][1] + cornersArray[3][1]) / 4
-        # Compare center of marker to center of screen to locate marker in capture
- 
-        DiffX = xCapCent-xMarkCent
-        DiffY = yCapCent-yMarkCent
-        DiffHypot = math.sqrt((DiffX*DiffX)+(DiffY*DiffY))
-        CValue= abs(cornersArray[0][0]-xMarkCent)
-        Theta = HalfFeildView*(DiffHypot/CValue)
-        round(Theta,2) 
+
+
+        # Theta = (half field of view)*(capture center to marker center)/(marker center to marker edge)
+        xCapCentToMarkCent = abs(xCapCent - xMarkCent)
+        halfMarkWidth = abs(cornersArray[0][0] - cornersArray[1][0])
+        Theta = HalfFeildView*(xCapCentToMarkCent/halfMarkWidth)
+        Theta = round(Theta,2)
+
+        #print("Ratio: ", xCapCentToMarkCent/halfMarkWidth)
+        print("Theta: ", Theta)
 
         # Loop to see if Theta has changed or not
         if (Theta != ThetaLast):
