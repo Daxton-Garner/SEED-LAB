@@ -1,4 +1,11 @@
-# SEED Lab - Mini Assignment - Computer Vission Assignment 
+# SEED Lab - Demo 1 - Computer Vission
+# Purpose: Determine the angle of an Aruco marker compared to the center of the camera
+# Method: Capture an image using the camera. If an Aruco marker is detected, display the andle on
+#           the LCD screen. Calculate the angle by determining the distance of the marker from the
+#           camera and the left to right distance from the center of the capture. Then take the
+#           tangent of a ratio of those values to detemrmine theangle the marker is at.
+# Required hardware: LCD screen, camera
+
 
 # Initialization
 import time
@@ -31,13 +38,12 @@ myDict = aruco.getPredefinedDictionary(aruco.DICT_6X6_50)
 
 # Capture from the camera plugged into the Pi
 capture = cv.VideoCapture(0)
-sleep (0.1) 
+sleep (0.1)
+
 # Set dimensions of the capture and find the center of the window
 capWidth = 640
-capHeight = 480
 xCapCent = capWidth/2
-yCapCent = capHeight / 2
-HalfFeildView = 54.8/2
+markWidthCM = 5
 capture.set(cv.CAP_PROP_FRAME_WIDTH, capWidth)
 
 si2c = SMBus(1)
@@ -54,6 +60,7 @@ def myFunction():
     # Loop to find if LCD screen needs to change output
     while True:
         if change:
+            lcd.clear
             gotSomething = q.get()
             if(gotSomething != 0):
                 ToPrint = str(Theta)
@@ -81,20 +88,20 @@ while True:
     # Enter this code if a marker is found
     if not ids is None:
 
-        # Calculate where the center of the marker is on the screen
+        # Calculate where the center of the marker is on the screen (x coordinate)
         cornersArray = np.array(corners)[0][0]
         xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
-        yMarkCent = (cornersArray[0][1] + cornersArray[1][1] + cornersArray[2][1] + cornersArray[3][1]) / 4
 
+        # Calculate theta
+        center2CenterPix = xCapCent - xMarkCent # Center of capture to center of marker in pixels
+        markWidthPix = (abs(cornersArray[0][0] - cornersArray[1][0]) + abs(cornersArray[2][0] - cornersArray[3][0]))/2
 
-        # Theta = (half field of view)*(capture center to marker center)/(marker center to marker edge)
-        xCapCentToMarkCent = abs(xCapCent - xMarkCent)
-        halfMarkWidth = abs(cornersArray[0][0] - cornersArray[1][0])
-        Theta = HalfFeildView*(xCapCentToMarkCent/halfMarkWidth)
-        Theta = round(Theta,2)
+        distance = 4161.416*(markWidthPix)**(-1.055)    # Marker dstance from camera, centimeters; power interpolation
+        left2Right = markWidthCM * center2CenterPix / markWidthPix  # Left to right distance from center, cm
+        theta = 90 - ((math.atan2(distance, left2Right)) * 180 / math.pi)     # Angle from center, degrees
 
-        #print("Ratio: ", xCapCentToMarkCent/halfMarkWidth)
-        print("Theta: ", Theta)
+        # Round theta to 2 decimal points
+        Theta = round(theta, 2)
 
         # Loop to see if Theta has changed or not
         if (Theta != ThetaLast):
