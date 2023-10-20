@@ -1,0 +1,21 @@
+Demo 1
+  Arduino: Move in a straight line and circle to predetermined specifications
+  Pi: Determine the angle of an Aruco marker compared to the center of the screen
+
+Files in the Demo 1 Folder:
+  Straight Line Control Folder: Arduino code
+  DemoOnePI: Raspberry pi code
+  Presentation Scrpt Demo 1: Script for video presentation
+  Presentation: Presentation for video
+
+Pi:
+  The code in the Raspberry Pi section of the demo determines where a 5cm marker is on the screen
+  It uses a calibration to find the distance the marker is from the camera. It then uses the known 
+  width of the marker (5cm) and the number of pixels wide the marker is to find a ratio and calculate 
+  the left to right distance from the center of the camera. Each of these distances are then used
+  to calculate the angle of the marker compared the the center of the camera. This angle is then
+  sent to the LCD screen.
+
+Arduino:
+
+
