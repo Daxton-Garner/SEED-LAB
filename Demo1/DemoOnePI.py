@@ -60,12 +60,14 @@ def myFunction():
     # Loop to find if LCD screen needs to change output
     while True:
         if change:
-            lcd.clear
             gotSomething = q.get()
             if(gotSomething != 0):
+                if (Theta < 0):
+                    lcd.color = [0, 150, 50]
+                else:
+                    lcd.color = [50, 0, 50]
                 ToPrint = str(Theta)
                 lcd.message = ToPrint
-                lcd.color = [0,150, 50]
             else:
                 lcd.color = [255,0,0]
                 lcd.message = "\n"
