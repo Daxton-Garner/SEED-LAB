@@ -5,13 +5,16 @@
 
 
 #include <Wire.h> //This is our Pi communication library
-#define A2 2
-#define B2 5
-#define PWMPIN 9  //Motor PWM
-#define DIRPIN 7  //Motor Direction
+#define A2 2        //Left Motor Encoder
+#define B2 5        //Left Motor Encoder
+#define A1 3        //Right Motor Encoder
+#define B1 6        //Right Motor Encoder
+#define PWMPINL 9   //Left Motor PWM
+#define PWMPINR 10  //Right Motor PWM
+#define DIRPINL 7   //Left Motor Direction
+#define DIRPINR 8   //Right Motor Direction
 #define PIN4 4
 #define MY_ADDR 8
-// This is defining all our pins
 
 bool debug = 0;
 float Kp = 4; // 1.7 was Our gain we found in our insitiall simulink
