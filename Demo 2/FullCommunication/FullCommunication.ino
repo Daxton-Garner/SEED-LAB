@@ -13,7 +13,7 @@
 #define PWMPINR 10  //Right Motor PWM
 #define DIRPINL 7   //Left Motor Direction
 #define DIRPINR 8   //Right Motor Direction
-#define PIN4 4
+#define PIN4 4   
 #define MY_ADDR 8
 
 bool debug = 0;
@@ -23,7 +23,9 @@ float Ki_pos = 2.5; // the intergral gain
 
 float readAngle;
 float readDistance;
-int lastTargetNum;
+float lastReadAngle;
+float lastReadDistance;
+int currentState = 1;
 int targetCnts;
 float targetRad;
 float desired_speed[2];
@@ -102,6 +104,8 @@ void setup() {
 
 void loop() {
 
+  // Reading Angle and Distance from Marker
+
   if (rxInd > 0) { //Check for incoming data
     // read the incoming byte:
     char incomingByte = rxBuf[0]; //Assumes only one character will be transmitted
@@ -120,6 +124,50 @@ void loop() {
     } 
     else if (incomingByte == '1' or incomingByte == '2' or incomingByte == '3' or incomingByte == '4') { }
   }
+
+  if (currentState == 1){
+    if (//When Pi says stop){
+      digitalWrite(DIRPINL, LOW);   //Control direction
+      digitalWrite(DIRPINR, HIGH);  //Control direction
+      
+      analogWrite(PWMPINL, 20);  //Control direction speed
+      analogWrite(PWMPINR, 20);  //Control direction speed
+    } else {
+      currentState = 2;
+      encoderCounts[0] = 0;
+      encoderCounts[1] = 0;
+      integral_error[0] = 0;
+      integral_error[1] = 0;
+      pos_rad[0] = 0;
+      pos_rad[1] = 0;
+    }
+  } else if (currentState == 2){
+    if (//When Pi says stop){
+      digitalWrite(DIRPINL, HIGH);   //Control direction
+      digitalWrite(DIRPINR, HIGH);  //Control direction
+      
+      analogWrite(PWMPINL, 20);  //Control direction speed
+      analogWrite(PWMPINR, 20);  //Control direction speed
+    } else {
+      currentState = 3;
+      encoderCounts[0] = 0;
+      encoderCounts[1] = 0;
+      integral_error[0] = 0;
+      integral_error[1] = 0;
+      pos_rad[0] = 0;
+      pos_rad[1] = 0;
+    }
+  } else if (currentState == 3){
+
+    //90 degree turn
+
+  } else {
+
+    //Circle time
+
+  }
+
+
 
   float pos_rad[2];
 
