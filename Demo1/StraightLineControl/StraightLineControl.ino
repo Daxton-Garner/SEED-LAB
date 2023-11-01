@@ -3,7 +3,6 @@
 //Hardware:    You will need an Arduino Uno connected to a motor, a voltage monitor, and Raspberry Pi.
 //             The motor should have a wheel attached and the Raspberry Pi will need a camera.
 
-
 #include <Wire.h>   //This is our Pi communication library
 #define A2 2        //Left Motor Encoder
 #define B2 5        //Left Motor Encoder
@@ -19,12 +18,14 @@
 bool debug = 0;
 bool turnComplete = 0;
 int stallCount = 0;
-float Kp = 4;        // 1.7 was Our gain we found in our insitiall simulink
-float Kp_pos = 1;    // The proportional gain
-float Ki_pos = 2.5;  // the intergral gain
+float Kp = 60.0;        // 1.7 was Our gain we found in our insitiall simulink
+float Kp_pos = 0.6;    // The proportional gain
+float Ki_pos = 0.3;  // the intergral gain
+float windcap = 1.5;
+int loopcount = 0;
 
-float targetdeg = 270.0;
-float targetdistft = 3;  //Circumfrance of wheel 47.1 cm or 0.471 m
+float targetdeg = 180;  //Deg CW
+float targetdistft = 1.05;  //Circumfrance of wheel 47.1 cm or 0.471 m
 
 float targetdistm;
 //float targetrotrad = targetdeg * 3.14159 / 180.0;
@@ -36,6 +37,8 @@ float desired_speed[2];
 float integral_error[2] = { 0, 0 };
 float pos_error[2] = { 0, 0 };
 float error[2] = { 0, 0 };
+//float deriv_error[2];
+//float prev_speed[2] = { 0 , 0 };
 
 int value[2];
 int motor_dir[2] = { 1, 1 };
@@ -47,7 +50,7 @@ unsigned long start_time_ms;
 float current_time;
 float last_time;
 
-float ang_velocity[2];
+float ang_velocity[2] = { 0 , 0 };
 float last_pos_rad[2];
 
 void A2Change() {                            //Interrupt handler for pin A
@@ -97,12 +100,10 @@ void setup() {
 void loop() {
   float pos_rad[2];
 
-  
-
   current_time = (float)(last_time_ms - start_time_ms) / 1000;  //Current time (sec)
 
   for (int i = 0; i < 2; i++) {
-    pos_rad[i] = 2 * PI * (float)encoderCounts[i] / 3200.0;     //Convert positions from steps to radians
+    pos_rad[i] = 2.0 * PI * (float)encoderCounts[i] / 3200.0;     //Convert positions from steps to radians
     //if (!turnComplete && i == 1) { pos_rad[i] = pos_rad[i]*(-1);} //Make one wheel go backwards during turn
 
     ang_velocity[i] = (pos_rad[i] - last_pos_rad[i]) / (current_time - last_time);  //Calculate angular velocity
@@ -110,23 +111,38 @@ void loop() {
     else { pos_error[i] = targetRad - pos_rad[i]; }
 
     integral_error[i] = integral_error[i] + pos_error[i] * ((float)desired_Ts_ms / 1000);  //Discrete integration (just a sum)
+   
     //Serial.println(integral_error[i]);
-    if (integral_error[i] > 1.5) { integral_error[i] = 1.5; }
-    if (integral_error[i] < -1.5) { integral_error[i] = -1.5; }
+    if (integral_error[i] > windcap) { integral_error[i] = windcap; }
+    if (integral_error[i] < -1.0*windcap) { integral_error[i] = -1.0*windcap; }
     desired_speed[i] = Kp_pos * pos_error[i] + Ki_pos * integral_error[i];  //Calc desired speed
+    //if (desired_speed[i] > 3.0) { desired_speed[i] = 3.0;}
+    //if (desired_speed[i] < -3.0) { desired_speed[i] = -3.0;}
+    //deriv_error[i] = desired_speed[i] - prev_speed[i];
+    //prev_speed[i] = (desired_speed[i] * 0.2) + (0.8 *  prev_speed[i]);
     error[i] = desired_speed[i] - ang_velocity[i];                          //Velocity error
-    value[i] = Kp * error[i];                                               //Final PWM value calculation
-
+    //if (loopcount < 1000 ) {
+    //  error[i] = error[i] * (float)loopcount/1000.0;
+    //  loopcount++;
+    //}    
+    value[i] = Kp * error[i];// - Kd*deriv_error[i];  
+                          //Final PWM value calculation
     if (value[i] < 0) {  //Translate negative pwm value to reversed motor direction
       value[i] *= -1;
       motor_dir[i] = 0;
     } else {
-      motor_dir[i] = 1;
+      motor_dir[i] = 1;   //hehehe -Jordie
     }
 
-    value[i] = value[i] * 32;                //Scale control loop output to PWM
     if (value[i] > 100) { value[i] = 100; }  //Cap PI controller output at 255
   }
+  Serial.print(desired_speed[0]);
+  Serial.print("\t");
+  Serial.print(ang_velocity[0]);
+  Serial.print("\t,\t");
+  Serial.print(desired_speed[1]);
+  Serial.print("\t");
+  Serial.println(ang_velocity[1]);
 
   analogWrite(PWMPINL, value[0]);  //Control direction speed
   analogWrite(PWMPINR, value[1]);  //Control direction speed
