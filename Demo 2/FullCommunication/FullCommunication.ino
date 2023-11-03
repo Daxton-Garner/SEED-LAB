@@ -28,7 +28,9 @@ float readDistance;
 float lastReadAngle;
 float lastReadDistance;
 int State;
+int returnState;
 int reset = 1;
+int Demo = 2;
 
 float wheelCir = 0.471;
 float wheelDiameter = 0.326;
@@ -137,7 +139,13 @@ void loop() {
     analogWrite(PWMPINL, 20);  //Control direction speed
     analogWrite(PWMPINR, 20);  //Control direction speed
                                //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  } else if (State == 3) {
+  } else if (State == 3){
+    analogWrite(PWMPINL, 0);  //Control direction speed
+    analogWrite(PWMPINR, 0);  //Control direction speed
+    if (Demo == 2){
+      talkToPi = 1;
+    }
+  } else if (State == 4) {
 
     if (reset == 1) {
       encoderCounts[0] = 0;
@@ -239,6 +247,7 @@ void loop() {
   }
   last_time_ms = millis();
   last_time = current_time;
+
 }
 
 //Handle I2C reception from pi
