@@ -16,8 +16,10 @@
 #define PIN4 4
 #define MY_ADDR 8
 
+int talkToPi;
 bool debug = 0;
-float Kp = 4;        // 1.7 was Our gain we found in our insitiall simulink
+float Kp = 4;  // 1.7 was Our gain we found in our insitiall simulink
+float Kpv = 2;
 float Kp_pos = 1;    // The proportional gain
 float Ki_pos = 2.5;  // the intergral gain
 
@@ -25,11 +27,20 @@ float readAngle;
 float readDistance;
 float lastReadAngle;
 float lastReadDistance;
-int currentState = 1;
+int State;
+int reset = 1;
 
 float wheelCir = 0.471;
+float wheelDiameter = 0.326;
+float wheelRadius = 0.163;
 float targetrotm;
 float targetRad;
+
+float desiredTime = 10;
+float leftWheelRadius = 0.143;
+float rightWheelRadius = 0.468;
+float rightWheelCirc = rightWheelRadius * 2 * PI;
+float leftWheelCirc = leftWheelRadius * 2 * PI;
 
 float desired_speed[2];
 float integral_error[2] = { 0, 0 };
@@ -47,6 +58,7 @@ float current_time;
 float last_time;
 
 float ang_velocity[2];
+float pos_rad[2];
 float last_pos_rad[2];
 
 char txBuf[7];
@@ -107,62 +119,46 @@ void loop() {
 
   // Reading Angle and Distance from Marker
 
-  if (rxInd > 0) {  //Check for incoming data
-    // read the incoming byte:
-    char incomingByte = rxBuf[0];  //Assumes only one character will be transmitted
-    rxInd = 0;                     //Resets indication that buffer has data
-    Serial.print("Read ");
-    Serial.print(incomingByte);
-    Serial.println(" from Pi");
-    updateTarget(incomingByte);  //Update target location for PI controller
-    if (incomingByte == 'd') {   //Toggle debug prints
-      debug = !debug;
-    } else if (incomingByte == 'S') {  //Reset timer and full throttle motor - for parameter tuning
-      current_time = 0.0;
-      last_time_ms = millis();  // reset sample time variable
-      start_time_ms = last_time_ms;
-      value = 100.0;
-    } else if (incomingByte == '1' or incomingByte == '2' or incomingByte == '3' or incomingByte == '4') {
-    }
-  }
 
-  if (currentState == 1) {
+  current_time = (float)(last_time_ms - start_time_ms) / 1000;  //Current time (sec)
+
+  //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  if (State == 1) {
     digitalWrite(DIRPINL, LOW);   //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
     analogWrite(PWMPINL, 20);  //Control direction speed
     analogWrite(PWMPINR, 20);  //Control direction speed
-  } else if (currentState == 2) {
+                               //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  } else if (State == 2) {
     digitalWrite(DIRPINL, HIGH);  //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
     analogWrite(PWMPINL, 20);  //Control direction speed
     analogWrite(PWMPINR, 20);  //Control direction speed
-  } else if (currentState == 3) {
-    targetdeg = 90.0;
-    targetrotm = (targetdeg / 360.0) * (0.685 * PI);
-    targetRad = (2 * PI) * (targetrotm / wheelCir);
-  } else {
+                               //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+  } else if (State == 3) {
 
-    //Circle time
-  }
-
-  float pos_rad[2];
-
-  current_time = (float)(last_time_ms - start_time_ms) / 1000;  //Current time (sec)
-
-  if (currentState == 3) {
+    if (reset == 1) {
+      encoderCounts[0] = 0;
+      encoderCounts[1] = 0;
+      integral_error[0] = 0;
+      integral_error[1] = 0;
+      pos_rad[0] = 0;
+      pos_rad[1] = 0;
+      float targetdeg = 90.0;
+      float targetrotm = (targetdeg / 360.0) * (0.685 * PI);
+      float targetRad = (2 * PI) * (targetrotm / wheelCir);
+      reset = 2;
+    }
 
     for (int i = 0; i < 2; i++) {
       pos_rad[i] = 2 * PI * (float)encoderCounts[i] / 3200.0;  //Convert positions from steps to radians
       //if (!turnComplete && i == 1) { pos_rad[i] = pos_rad[i]*(-1);} //Make one wheel go backwards during turn
 
       ang_velocity[i] = (pos_rad[i] - last_pos_rad[i]) / (current_time - last_time);  //Calculate angular velocity
-      if (!turnComplete && i == 1) {
-        pos_error[i] = (-1) * targetRad - pos_rad[i];
-      } else {
-        pos_error[i] = targetRad - pos_rad[i];
-      }
+
+      pos_error[i] = (-1) * targetRad - pos_rad[i];
 
       integral_error[i] = integral_error[i] + pos_error[i] * ((float)desired_Ts_ms / 1000);  //Discrete integration (just a sum)
       //Serial.println(integral_error[i]);
@@ -171,18 +167,39 @@ void loop() {
       desired_speed[i] = Kp_pos * pos_error[i] + Ki_pos * integral_error[i];  //Calc desired speed
       error[i] = desired_speed[i] - ang_velocity[i];                          //Velocity error
       value[i] = Kp * error[i];                                               //Final PWM value calculation
+      //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    }
+  } else {
+    desired_speed[0] = rightWheelCirc / desiredTime;
+    desired_speed[1] = leftWheelCirc / desiredTime;
 
-      if (value[i] < 0) {  //Translate negative pwm value to reversed motor direction
-        value[i] *= -1;
-        motor_dir[i] = 0;
-      } else {
-        motor_dir[i] = 1;
-      }
+    if (reset == 2) {
+      encoderCounts[0] = 0;
+      encoderCounts[1] = 0;
+      pos_rad[0] = 0;
+      pos_rad[1] = 0;
+      reset = 0;
+    }
+    for (int i = 0; i < 2; i++) {
+      pos_rad[i] = 2 * PI * (float)encoderCounts[i] / 3200.0;                         //Convert positions from steps to radians
+      ang_velocity[i] = (pos_rad[i] - last_pos_rad[i]) / (current_time - last_time);  //Calculate angular velocity
 
-      value[i] = value[i] * 32;                //Scale control loop output to PWM
-      if (value[i] > 100) { value[i] = 100; }  //Cap PI controller output at 255
+      error[i] = desired_speed[i] - ang_velocity[i];  //Velocity error
+      value[i] = Kpv * error[i];
+    }
+  }
+  //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+  for (int i = 0; i < 2; i++) {
+    if (value[i] < 0) {  //Translate negative pwm value to reversed motor direction
+      value[i] *= -1;
+      motor_dir[i] = 0;
+    } else {
+      motor_dir[i] = 1;
     }
 
+    value[i] = value[i] * 32;                //Scale control loop output to PWM
+    if (value[i] > 100) { value[i] = 100; }  //Cap PI controller output at 255
 
     analogWrite(PWMPINL, value[0]);  //Control direction speed
     analogWrite(PWMPINR, value[1]);  //Control direction speed
@@ -199,10 +216,6 @@ void loop() {
     }
   }
 
-  dtostrf(last_pos_rad, 3, 2, txBuf);  //Float to string for reporting back to pi -Defunct
-  //Wire.write(txBuf);
-  Serial.println(txBuf);  //Alt Debug
-
   if (debug) {
     Serial.print(current_time);
     Serial.print("\t");
@@ -216,6 +229,8 @@ void loop() {
     Serial.println("");
   }
 
+  Serial.println(State);
+
   last_pos_rad[0] = pos_rad[0];
   last_pos_rad[1] = pos_rad[1];
 
@@ -224,26 +239,6 @@ void loop() {
   }
   last_time_ms = millis();
   last_time = current_time;
-}
-
-//Translate the previous target and current target to a step target adjustment
-void updateTarget(char tgtCmd) {
-  lastTargetNum = targetNum;                   //
-  targetNum = tgtCmd - '0';                    //Char to int
-  if (targetNum == 1 && lastTargetNum == 4) {  // 4 to 1 transition
-    targetCnts -= 800;
-  } else if (targetNum == 4 && lastTargetNum == 1) {  // 1 to 4 transition
-    targetCnts += 800;
-  } else if (targetNum > lastTargetNum + 1) {  // 1 to 3 transition and 2 to 4 transition
-    targetCnts -= 1600;
-  } else if (targetNum < lastTargetNum - 1) {  //3 to 1 transition and 4 to 2 transition
-    targetCnts += 1600;
-  } else if (targetNum > lastTargetNum) {  //1 to 2, 2 to 3, 3 to 4 transitions
-    targetCnts -= 800;
-  } else if (targetNum < lastTargetNum) {  //4 to 3, 3 to 2, 2 to 1 transitions
-    targetCnts += 800;
-  }
-  targetRad = 2 * PI * (float)targetCnts / 3200.0;  //Convert to radians for PI loop
 }
 
 //Handle I2C reception from pi
