@@ -16,6 +16,12 @@
 #define PIN4 4
 #define MY_ADDR 8
 
+// START BAILEY ADD
+volatile uint8_t instruction[32]={0};
+volatile uint8_t reply = 0;
+volatile uint8_t msgLength = 0;
+// END BAILEY ADD
+
 int talkToPi;
 bool debug = 0;
 float Kp = 4;  // 1.7 was Our gain we found in our insitiall simulink
@@ -66,7 +72,7 @@ float last_pos_rad[2];
 char txBuf[7];
 char rxBuf[7];
 int rxInd = 0;
-int reply = 0;
+//int reply = 0;
 
 void A2Change() {                            //Interrupt handler for pin A
   if (digitalRead(A2) == digitalRead(B2)) {  //Encoder direction check
@@ -109,12 +115,18 @@ void setup() {
   pinMode(PIN4, OUTPUT);
   digitalWrite(PIN4, HIGH);
 
+  //START BAILEY ADD
+  //We want to control the built-in LED (pin 13)
+  pinMode (LED_BUILTIN, OUTPUT);
   // Initialize I2C
   Wire.begin(MY_ADDR);
   // Set callbacks for I2C interrupts
   Wire.onReceive(I2Creceive);
   // Send data back
   Wire.onRequest(I2Crequest);
+  // END BAILEY ADD
+
+
 }
 
 void loop() {
@@ -225,19 +237,19 @@ void loop() {
   }
 
   if (debug) {
-    Serial.print(current_time);
-    Serial.print("\t");
-    Serial.print(value[0]);
-    Serial.print("\t");
-    Serial.print(encoderCounts[0]);
-    Serial.print("\t");
-    Serial.print(value[1]);
-    Serial.print("\t");
-    Serial.print(encoderCounts[1]);
-    Serial.println("");
+  //  Serial.print(current_time);
+  //  Serial.print("\t");
+  //  Serial.print(value[0]);
+  //  Serial.print("\t");
+  //  Serial.print(encoderCounts[0]);
+  //  Serial.print("\t");
+  //  Serial.print(value[1]);
+  //  Serial.print("\t");
+  //  Serial.print(encoderCounts[1]);
+  //  Serial.println("");
   }
 
-  Serial.println(State);
+ // Serial.println(State);
 
   last_pos_rad[0] = pos_rad[0];
   last_pos_rad[1] = pos_rad[1];
@@ -248,19 +260,39 @@ void loop() {
   last_time_ms = millis();
   last_time = current_time;
 
+  //BAILEY ADD START
+  // If there is data on the buffer, read it
+  if (msgLength != -1 ) {
+    digitalWrite(LED_BUILTIN, instruction[0]);
+    printReceived();
+    msgLength = 0;
+  }
+  //BAILEY ADD END
+}
+//BAILEY ADD START
+void printReceived(){
+  Serial.print("Instruction received:");
+  Serial.print(instruction[0]);
+  Serial.println("");
 }
 
 //Handle I2C reception from pi
 void I2Creceive() {
-  Wire.read();
+ // offset = Wire.read();
   while (Wire.available()) {
-    rxBuf[rxInd] = Wire.read();
-    rxInd++;
+    //rxBuf[rxInd] = Wire.read();
+    //rxInd++;
+    instruction[msgLength] = Wire.read();
+    msgLength++;
+
   }
+ //     Serial.print("From PI: ");
+   // Serial.print(instruction[0]);
 }
 
 // Acknowledge pi communication requests
 void I2Crequest() {
-  Wire.write(reply);
-  reply = 0;
+  Wire.write(69);
+  reply = talkToPi;
+
 }

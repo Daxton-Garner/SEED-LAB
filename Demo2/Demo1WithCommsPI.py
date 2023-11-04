@@ -1,6 +1,9 @@
-# SEED Lab - Demo 2 - Computer Vission
-# Purpose: 
-# Method: 
+# SEED Lab - Demo 1 - Computer Vission
+# Purpose: Determine the angle of an Aruco marker compared to the center of the camera
+# Method: Capture an image using the camera. If an Aruco marker is detected, display the andle on
+#           the LCD screen. Calculate the angle by determining the distance of the marker from the
+#           camera and the left to right distance from the center of the capture. Then take the
+#           tangent of a ratio of those values to detemrmine theangle the marker is at.
 # Required hardware: LCD screen, camera
 
 
@@ -22,15 +25,15 @@ from random import random
 # Variable creation
 q = queue.Queue()
 change = False
-stateLast = -1
-state = 0
+ThetaLast = -1
 
-# BAILEY ADD FOR COMMS
+#START BAILEY ADD 
 ARD_ADDR = 8
 offset = 1
+#initialize I2C bus
 i2c = board.I2C()
 i2c = SMBus(1)
-# END BAILEY ADD 
+#END BAILEY ADD
 
 # Disctionary for aruco generation and detection
 myDict = aruco.getPredefinedDictionary(aruco.DICT_6X6_50)
@@ -71,20 +74,20 @@ def myFunction():
                     lcd.color = [0, 150, 50]
                 else:
                     lcd.color = [50, 0, 50]
-                ToPrint = str(state)
+                ToPrint = str(Theta)
                 lcd.message = ToPrint
             else:
                 lcd.color = [255,0,0]
                 lcd.message = "\n"
-                
+            
             # START BAILEY ADD
-            i2c.write_byte_data(ARD_ADDR, offset, int(state))  
+            i2c.write_byte_data(ARD_ADDR, offset, int(Theta))  
             reply = i2c.read_byte_data(ARD_ADDR, offset)
             print("Received from Arduino: "+str(reply+100))
             lcd.message = "From Arduino\n" + str(reply+100)
             lcd.color = [100, 0 ,0]
             # END BAILEY ADD 
-    
+
 myThread = threading.Thread(target=myFunction,args=())
 myThread.start()
 
@@ -100,76 +103,38 @@ while True:
     overlay = cv.cvtColor(gray, cv.COLOR_GRAY2RGB)
     overlay = aruco.drawDetectedMarkers(overlay,corners,borderColor = 4)
 
-    if state == 0:  # Not searching yet
-        state = 0.5
+    # Enter this code if a marker is found
+    if not ids is None:
 
-    elif state == 0.5:  # Searching but marker isn't seen yet
-        if not ids is None:
-            state = 1
-
-    elif state == 1:    # Searching but marker is seen
-        if not ids is None:
-            # Calculate where the center of the marker is on the screen (x coordinate)
-            cornersArray = np.array(corners)[0][0]
-            xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
-
-            # Calculate theta
-            center2CenterPix = xCapCent - xMarkCent # Center of capture to center of marker in pixels
-            markWidthPix = (abs(cornersArray[0][0] - cornersArray[1][0]) + abs(cornersArray[2][0] - cornersArray[3][0]))/2
-
-            distance = 4161.416*(markWidthPix)**(-1.055)    # Marker dstance from camera, centimeters; power interpolation
-            left2Right = markWidthCM * center2CenterPix / markWidthPix  # Left to right distance from center, cm
-            theta = 90 - ((math.atan2(distance, left2Right)) * 180 / math.pi)     # Angle from center, degrees
-
-            #print("Theta: ", round(theta, 2))
-            
-            if abs(theta) < 1:
-                state = 2
-        else:
-            state = 0
-
-    elif state == 2:    # Marker is in the middle of the screen
         # Calculate where the center of the marker is on the screen (x coordinate)
         cornersArray = np.array(corners)[0][0]
         xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
 
-        # Calculate distance
+        # Calculate theta
         center2CenterPix = xCapCent - xMarkCent # Center of capture to center of marker in pixels
         markWidthPix = (abs(cornersArray[0][0] - cornersArray[1][0]) + abs(cornersArray[2][0] - cornersArray[3][0]))/2
 
         distance = 4161.416*(markWidthPix)**(-1.055)    # Marker dstance from camera, centimeters; power interpolation
+        left2Right = markWidthCM * center2CenterPix / markWidthPix  # Left to right distance from center, cm
+        theta = 90 - ((math.atan2(distance, left2Right)) * 180 / math.pi)     # Angle from center, degrees
 
-        #print("Distance: ", round(distance, 2))
+        # Round theta to 2 decimal points
+        Theta = round(theta, 2)
 
-        if distance < 30.48:
-            state = 3
+        # Loop to see if Theta has changed or not
+        if (Theta != ThetaLast):
+            q.put(Theta)
+            change = True
+        else:
+            change = False
+            ThetaLast = Theta
+            q.put(0)
 
-        elif state == 3:
-            if recieved == 0:
-                state = -1
-            elif recieved == 1:
-                state = 4
-
-        elif state == 4:
-            if recieved == 3:
-                state = 5
-
-        elif state == 5:
-            if recieved == 5:
-                state = -1
-                
-
-    # Loop to see if state has changed or not
-    if (state != stateLast):
-        print("State: ", state)
-        #q.put(state)
-        change = True
-        stateLast = state
-    else:
-        change = False
-        stateLast = state
-            
-
+        # Edit the overlay display to outline the marker
+        ids = ids.flatten()
+        for (outline, id) in zip(corners, ids):
+            markerCorners = outline.reshape((4,2))
+            overlay = cv.putText(overlay, str(id), (int(markerCorners[0,0]),int(markerCorners[0,1])-15),cv.FONT_HERSHEY_SIMPLEX,0.5,(255,0,0),2)
 
     # Show the overlay
     cv.imshow("overlay", overlay)
