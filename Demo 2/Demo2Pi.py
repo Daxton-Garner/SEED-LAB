@@ -62,8 +62,17 @@ def myFunction():
     lcd = character_lcd.Character_LCD_RGB_I2C(i2c, lcd_columns, lcd_rows)
     lcd.color = [50, 0, 50]
     lcd.clear()
+
     # Loop to find if LCD screen needs to change output
     while True:
+            # START BAILEY ADD
+        i2c.write_byte_data(ARD_ADDR, offset, int(state))  
+        reply = i2c.read_byte_data(ARD_ADDR, state)
+        i2c.read_byte_data(ARD_ADDR, reply)
+        print("Received from Arduino: "+int(reply))
+        lcd.message = "From Arduino\n" + int(reply)
+        lcd.color = [100, 0 ,0]
+        # END BAILEY ADD 
         if change:
             gotSomething = q.get()
             if(gotSomething != 0):
@@ -77,13 +86,7 @@ def myFunction():
                 lcd.color = [255,0,0]
                 lcd.message = "\n"
                 
-            # START BAILEY ADD
-            i2c.write_byte_data(ARD_ADDR, offset, int(state))  
-            reply = i2c.read_byte_data(ARD_ADDR, offset)
-            print("Received from Arduino: "+str(reply+100))
-            lcd.message = "From Arduino\n" + str(reply+100)
-            lcd.color = [100, 0 ,0]
-            # END BAILEY ADD 
+
     
 myThread = threading.Thread(target=myFunction,args=())
 myThread.start()
@@ -106,7 +109,9 @@ while True:
     elif state == 0.5:  # Searching but marker isn't seen yet
         if not ids is None:
             state = 1
-
+            # BAILEY ADD
+            i2c.write_byte_data(ARD_ADDR, offset, int(state))
+            
     elif state == 1:    # Searching but marker is seen
         if not ids is None:
             # Calculate where the center of the marker is on the screen (x coordinate)
@@ -125,9 +130,12 @@ while True:
             
             if abs(theta) < 1:
                 state = 2
+                # BAILEY ADD
+                i2c.write_byte_data(ARD_ADDR, offset, int(state))
         else:
             state = 0
-
+            # BAILEY ADD
+            #i2c.write_byte_data(ARD_ADDR, offset, int(state))
     elif state == 2:    # Marker is in the middle of the screen
         # Calculate where the center of the marker is on the screen (x coordinate)
         cornersArray = np.array(corners)[0][0]
@@ -143,21 +151,25 @@ while True:
 
         if distance < 30.48:
             state = 3
-
+            # BAILEY ADD
+            i2c.write_byte_data(ARD_ADDR, offset, int(state))
         elif state == 3:
             if recieved == 0:
                 state = -1
             elif recieved == 1:
                 state = 4
-
+            # BAILEY ADD
+            i2c.write_byte_data(ARD_ADDR, offset, int(state))
         elif state == 4:
             if recieved == 3:
                 state = 5
-
+            # BAILEY ADD
+            i2c.write_byte_data(ARD_ADDR, offset, int(state))
         elif state == 5:
             if recieved == 5:
                 state = -1
-                
+                # BAILEY ADD
+                #i2c.write_byte_data(ARD_ADDR, offset, int(state))
 
     # Loop to see if state has changed or not
     if (state != stateLast):
@@ -165,6 +177,7 @@ while True:
         #q.put(state)
         change = True
         stateLast = state
+
     else:
         change = False
         stateLast = state
