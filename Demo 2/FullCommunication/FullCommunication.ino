@@ -17,7 +17,7 @@
 #define MY_ADDR 8
 
 // START BAILEY ADD
-volatile uint8_t instruction[32]={0};
+volatile uint8_t instruction[32] = { 0 };
 volatile uint8_t reply = 0;
 volatile uint8_t msgLength = 0;
 // END BAILEY ADD
@@ -33,7 +33,7 @@ float readAngle;
 float readDistance;
 float lastReadAngle;
 float lastReadDistance;
-int State;
+int State = 1;
 int returnState;
 int reset = 1;
 int Demo = 2;
@@ -117,7 +117,7 @@ void setup() {
 
   //START BAILEY ADD
   //We want to control the built-in LED (pin 13)
-  pinMode (LED_BUILTIN, OUTPUT);
+  pinMode(LED_BUILTIN, OUTPUT);
   // Initialize I2C
   Wire.begin(MY_ADDR);
   // Set callbacks for I2C interrupts
@@ -125,8 +125,6 @@ void setup() {
   // Send data back
   Wire.onRequest(I2Crequest);
   // END BAILEY ADD
-
-
 }
 
 void loop() {
@@ -151,10 +149,10 @@ void loop() {
     analogWrite(PWMPINL, 20);  //Control direction speed
     analogWrite(PWMPINR, 20);  //Control direction speed
                                //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  } else if (State == 3){
+  } else if (State == 3) {
     analogWrite(PWMPINL, 0);  //Control direction speed
     analogWrite(PWMPINR, 0);  //Control direction speed
-    if (Demo == 2){
+    if (Demo == 2) {
       talkToPi = 1;
     }
   } else if (State == 4) {
@@ -174,7 +172,6 @@ void loop() {
 
     for (int i = 0; i < 2; i++) {
       pos_rad[i] = 2 * PI * (float)encoderCounts[i] / 3200.0;  //Convert positions from steps to radians
-      //if (!turnComplete && i == 1) { pos_rad[i] = pos_rad[i]*(-1);} //Make one wheel go backwards during turn
 
       ang_velocity[i] = (pos_rad[i] - last_pos_rad[i]) / (current_time - last_time);  //Calculate angular velocity
 
@@ -182,13 +179,39 @@ void loop() {
 
       integral_error[i] = integral_error[i] + pos_error[i] * ((float)desired_Ts_ms / 1000);  //Discrete integration (just a sum)
       //Serial.println(integral_error[i]);
+
       if (integral_error[i] > 1.5) { integral_error[i] = 1.5; }
       if (integral_error[i] < -1.5) { integral_error[i] = -1.5; }
+
       desired_speed[i] = Kp_pos * pos_error[i] + Ki_pos * integral_error[i];  //Calc desired speed
       error[i] = desired_speed[i] - ang_velocity[i];                          //Velocity error
-      value[i] = Kp * error[i];                                               //Final PWM value calculation
-      //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+      value[i] = Kp * error[i];
+
+      if (value[i] < 0) {  //Translate negative pwm value to reversed motor direction
+        value[i] *= -1;
+        motor_dir[i] = 0;
+      } else {
+        motor_dir[i] = 1;
+      }
+
+      value[i] = value[i] * 32;                //Scale control loop output to PWM
+      if (value[i] > 100) { value[i] = 100; }  //Cap PI controller output at 255
+
+      if (motor_dir[0]) {
+        digitalWrite(DIRPINL, LOW);
+      } else {
+        digitalWrite(DIRPINL, HIGH);
+      }
+      if (motor_dir[1]) {
+        digitalWrite(DIRPINR, HIGH);
+      } else {
+        digitalWrite(DIRPINR, LOW);
+      }
+
+      analogWrite(PWMPINL, value[0]);  //Control direction speed
+      analogWrite(PWMPINR, value[1]);  //Control direction speed
     }
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   } else {
     desired_speed[0] = rightWheelCirc / desiredTime;
     desired_speed[1] = leftWheelCirc / desiredTime;
@@ -200,56 +223,55 @@ void loop() {
       pos_rad[1] = 0;
       reset = 0;
     }
+
     for (int i = 0; i < 2; i++) {
       pos_rad[i] = 2 * PI * (float)encoderCounts[i] / 3200.0;                         //Convert positions from steps to radians
       ang_velocity[i] = (pos_rad[i] - last_pos_rad[i]) / (current_time - last_time);  //Calculate angular velocity
 
       error[i] = desired_speed[i] - ang_velocity[i];  //Velocity error
       value[i] = Kpv * error[i];
+
+      if (value[i] < 0) {  //Translate negative pwm value to reversed motor direction
+        value[i] *= -1;
+        motor_dir[i] = 0;
+      } else {
+        motor_dir[i] = 1;
+      }
+
+      value[i] = value[i] * 32;                //Scale control loop output to PWM
+      if (value[i] > 255) { value[i] = 255; }  //Cap PI controller output at 255
+
+      analogWrite(PWMPINL, value[0]);  //Control direction speed
+      analogWrite(PWMPINR, value[1]);  //Control direction speed
+
+      if (motor_dir[0]) {
+        digitalWrite(DIRPINL, LOW);
+      } else {
+        digitalWrite(DIRPINL, HIGH);
+      }
+      if (motor_dir[1]) {
+        digitalWrite(DIRPINR, HIGH);
+      } else {
+        digitalWrite(DIRPINR, LOW);
+      }
     }
   }
   //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
-  for (int i = 0; i < 2; i++) {
-    if (value[i] < 0) {  //Translate negative pwm value to reversed motor direction
-      value[i] *= -1;
-      motor_dir[i] = 0;
-    } else {
-      motor_dir[i] = 1;
-    }
-
-    value[i] = value[i] * 32;                //Scale control loop output to PWM
-    if (value[i] > 100) { value[i] = 100; }  //Cap PI controller output at 255
-
-    analogWrite(PWMPINL, value[0]);  //Control direction speed
-    analogWrite(PWMPINR, value[1]);  //Control direction speed
-
-    if (motor_dir[0]) {
-      digitalWrite(DIRPINL, LOW);
-    } else {
-      digitalWrite(DIRPINL, HIGH);
-    }
-    if (motor_dir[1]) {
-      digitalWrite(DIRPINR, HIGH);
-    } else {
-      digitalWrite(DIRPINR, LOW);
-    }
-  }
-
   if (debug) {
-  //  Serial.print(current_time);
-  //  Serial.print("\t");
-  //  Serial.print(value[0]);
-  //  Serial.print("\t");
-  //  Serial.print(encoderCounts[0]);
-  //  Serial.print("\t");
-  //  Serial.print(value[1]);
-  //  Serial.print("\t");
-  //  Serial.print(encoderCounts[1]);
-  //  Serial.println("");
+    //  Serial.print(current_time);
+    //  Serial.print("\t");
+    //  Serial.print(value[0]);
+    //  Serial.print("\t");
+    //  Serial.print(encoderCounts[0]);
+    //  Serial.print("\t");
+    //  Serial.print(value[1]);
+    //  Serial.print("\t");
+    //  Serial.print(encoderCounts[1]);
+    //  Serial.println("");
   }
 
- // Serial.println(State);
+  // Serial.println(State);
 
   last_pos_rad[0] = pos_rad[0];
   last_pos_rad[1] = pos_rad[1];
@@ -262,7 +284,7 @@ void loop() {
 
   //BAILEY ADD START
   // If there is data on the buffer, read it
-  if (msgLength != -1 ) {
+  if (msgLength != -1) {
     digitalWrite(LED_BUILTIN, instruction[0]);
     printReceived();
     msgLength = 0;
@@ -270,7 +292,7 @@ void loop() {
   //BAILEY ADD END
 }
 //BAILEY ADD START
-void printReceived(){
+void printReceived() {
   Serial.print("Instruction received:");
   Serial.print(instruction[0]);
   Serial.println("");
@@ -278,21 +300,19 @@ void printReceived(){
 
 //Handle I2C reception from pi
 void I2Creceive() {
- // offset = Wire.read();
+  // offset = Wire.read();
   while (Wire.available()) {
     //rxBuf[rxInd] = Wire.read();
     //rxInd++;
     instruction[msgLength] = Wire.read();
     msgLength++;
-
   }
- //     Serial.print("From PI: ");
-   // Serial.print(instruction[0]);
+  //     Serial.print("From PI: ");
+  // Serial.print(instruction[0]);
 }
 
 // Acknowledge pi communication requests
 void I2Crequest() {
   Wire.write(69);
   reply = talkToPi;
-
 }
