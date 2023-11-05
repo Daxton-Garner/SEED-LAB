@@ -33,7 +33,7 @@ float readAngle;
 float readDistance;
 float lastReadAngle;
 float lastReadDistance;
-int State = 1;
+int State = 0;
 int returnState;
 int reset = 1;
 int Demo = 2;
@@ -102,6 +102,7 @@ void setup() {
   pinMode(B1, INPUT_PULLUP);
   pinMode(A2, INPUT_PULLUP);  //Set inputs and pullups
   pinMode(B2, INPUT_PULLUP);
+  pinMode(LED_BUILTIN, OUTPUT);
 
   attachInterrupt(digitalPinToInterrupt(A2), A2Change, CHANGE);  // attach interrupt handler
   attachInterrupt(digitalPinToInterrupt(A1), A1Change, CHANGE);  // attach interrupt handler
@@ -136,16 +137,16 @@ void loop() {
 
   //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   if (State == 1) {
-    //digitalWrite(DIRPINL, LOW);   //Control direction
-    //digitalWrite(DIRPINR, HIGH);  //Control direction
+    digitalWrite(DIRPINL, HIGH);   //Control direction
+    digitalWrite(DIRPINR, HIGH);  //Control direction
 
-    //analogWrite(PWMPINL, 20);  //Control direction speed
-    //analogWrite(PWMPINR, 20);  //Control direction speed
-    value[0] = -20;
-    value[1] = 20;
-                               //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+    analogWrite(PWMPINL, 20);  //Control direction speed
+    analogWrite(PWMPINR, 20);  //Control direction speed
+    //value[0] = -20;
+    //value[1] = 20;
+    //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   } else if (State == 2) {
-    digitalWrite(DIRPINL, HIGH);  //Control direction
+    digitalWrite(DIRPINL, LOW);  //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
     analogWrite(PWMPINL, 20);  //Control direction speed
@@ -273,7 +274,7 @@ void loop() {
     //  Serial.println("");
   }
 
-   //Serial.println(State);
+  //Serial.println(State);
 
   last_pos_rad[0] = pos_rad[0];
   last_pos_rad[1] = pos_rad[1];
@@ -286,13 +287,15 @@ void loop() {
 
   //BAILEY ADD START
   // If there is data on the buffer, read it
-  if (msgLength >0 ) {
+  if (msgLength > 0) {
     digitalWrite(LED_BUILTIN, instruction[0]);
     printReceived();
     msgLength = 0;
   }
   //BAILEY ADD END
-}
+}  //End Loop
+
+
 //BAILEY ADD START
 void printReceived() {
   Serial.print("Instruction received:");
@@ -303,19 +306,20 @@ void printReceived() {
 
 //Handle I2C reception from pi
 void I2Creceive() {
+  Serial.println("I");
   // offset = Wire.read();
   while (Wire.available()) {
     //rxBuf[rxInd] = Wire.read();
     //rxInd++;
     instruction[msgLength] = Wire.read();
+    Serial.println(String(instruction[msgLength]));
     msgLength++;
-  }
-  // Serial.print("From PI: ");
+  } //End While available
   // Serial.print(instruction[0]);
 }
 
 // Acknowledge pi communication requests
 void I2Crequest() {
-  Wire.write(69);
+  Wire.write(0);
   reply = talkToPi;
 }
