@@ -136,11 +136,13 @@ void loop() {
 
   //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   if (State == 1) {
-    digitalWrite(DIRPINL, LOW);   //Control direction
-    digitalWrite(DIRPINR, HIGH);  //Control direction
+    //digitalWrite(DIRPINL, LOW);   //Control direction
+    //digitalWrite(DIRPINR, HIGH);  //Control direction
 
-    analogWrite(PWMPINL, 20);  //Control direction speed
-    analogWrite(PWMPINR, 20);  //Control direction speed
+    //analogWrite(PWMPINL, 20);  //Control direction speed
+    //analogWrite(PWMPINR, 20);  //Control direction speed
+    value[0] = -20;
+    value[1] = 20;
                                //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   } else if (State == 2) {
     digitalWrite(DIRPINL, HIGH);  //Control direction
@@ -294,6 +296,7 @@ void loop() {
 //BAILEY ADD START
 void printReceived() {
   Serial.print("Instruction received:");
+  State = instruction[0];
   Serial.print(instruction[0]);
   Serial.println("");
 }
