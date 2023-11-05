@@ -273,7 +273,7 @@ void loop() {
     //  Serial.println("");
   }
 
-  // Serial.println(State);
+   //Serial.println(State);
 
   last_pos_rad[0] = pos_rad[0];
   last_pos_rad[1] = pos_rad[1];
@@ -286,7 +286,7 @@ void loop() {
 
   //BAILEY ADD START
   // If there is data on the buffer, read it
-  if (msgLength != -1) {
+  if (msgLength >0 ) {
     digitalWrite(LED_BUILTIN, instruction[0]);
     printReceived();
     msgLength = 0;
@@ -297,7 +297,7 @@ void loop() {
 void printReceived() {
   Serial.print("Instruction received:");
   State = instruction[0];
-  Serial.print(instruction[0]);
+  Serial.print(State);
   Serial.println("");
 }
 
@@ -310,7 +310,7 @@ void I2Creceive() {
     instruction[msgLength] = Wire.read();
     msgLength++;
   }
-  //     Serial.print("From PI: ");
+  // Serial.print("From PI: ");
   // Serial.print(instruction[0]);
 }
 
