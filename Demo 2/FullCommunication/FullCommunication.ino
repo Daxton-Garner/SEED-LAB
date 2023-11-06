@@ -24,10 +24,10 @@ volatile uint8_t msgLength = 0;
 
 int talkToPi;
 bool debug = 0;
-float Kp = 4;  // 1.7 was Our gain we found in our insitiall simulink
+float Kp = 50;  // 1.7 was Our gain we found in our insitiall simulink
 float Kpv = 2;
-float Kp_pos = 1;    // The proportional gain
-float Ki_pos = 2.5;  // the intergral gain
+float Kp_pos = 2;    // The proportional gain
+float Ki_pos = 0;  // the intergral gain
 
 float readAngle;
 float readDistance;
@@ -39,12 +39,14 @@ int reset = 1;
 int Demo = 2;
 
 float wheelCir = 0.471;
-float wheelDiameter = 0.326;
+float wheelDiameter = 0.345;
 float wheelRadius = 0.163;
 float targetrotm;
-float targetRad;
+float targetrotm2 [2];
+float targetRad[2];
+float currentRad[2];
 
-float desiredTime = 10;
+float desiredTime = 7.5;
 float leftWheelRadius = 0.143;
 float rightWheelRadius = 0.468;
 float rightWheelCirc = rightWheelRadius * 2 * PI;
@@ -140,8 +142,8 @@ void loop() {
     digitalWrite(DIRPINL, HIGH);   //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
-    analogWrite(PWMPINL, 20);  //Control direction speed
-    analogWrite(PWMPINR, 20);  //Control direction speed
+    analogWrite(PWMPINL, 40);  //Control direction speed
+    analogWrite(PWMPINR, 40);  //Control direction speed
     //value[0] = -20;
     //value[1] = 20;
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -167,9 +169,11 @@ void loop() {
       integral_error[1] = 0;
       pos_rad[0] = 0;
       pos_rad[1] = 0;
-      float targetdeg = 90.0;
-      float targetrotm = (targetdeg / 360.0) * (0.685 * PI);
-      float targetRad = (2 * PI) * (targetrotm / wheelCir);
+      float targetdeg = 110.0;
+      targetrotm = (targetdeg / 360.0) * (wheelDiameter * PI);
+      targetRad[1] = (2 * PI) * (targetrotm / wheelCir);
+      targetRad[0] = -1 * targetRad[1];
+      //Serial.println(targetRad);
       reset = 2;
     }
 
@@ -178,10 +182,11 @@ void loop() {
 
       ang_velocity[i] = (pos_rad[i] - last_pos_rad[i]) / (current_time - last_time);  //Calculate angular velocity
 
-      pos_error[i] = (-1) * targetRad - pos_rad[i];
+      pos_error[i] = (-1) * targetRad[i] - pos_rad[i];
 
       integral_error[i] = integral_error[i] + pos_error[i] * ((float)desired_Ts_ms / 1000);  //Discrete integration (just a sum)
-      //Serial.println(integral_error[i]);
+      
+      //Serial.println(targetRad);
 
       if (integral_error[i] > 1.5) { integral_error[i] = 1.5; }
       if (integral_error[i] < -1.5) { integral_error[i] = -1.5; }
@@ -197,8 +202,8 @@ void loop() {
         motor_dir[i] = 1;
       }
 
-      value[i] = value[i] * 32;                //Scale control loop output to PWM
-      if (value[i] > 100) { value[i] = 100; }  //Cap PI controller output at 255
+      //value[i] = value[i] * 32;                //Scale control loop output to PWM
+      if (value[i] > 75) { value[i] = 75; }  //Cap PI controller output at 255
 
       if (motor_dir[0]) {
         digitalWrite(DIRPINL, LOW);
@@ -211,13 +216,28 @@ void loop() {
         digitalWrite(DIRPINR, LOW);
       }
 
+      currentRad[i] = 2 * PI * ((float)encoderCounts[i] / 3200);
+
+      //Serial.println(targetRad[i] + currentRad[i]);
+
       analogWrite(PWMPINL, value[0]);  //Control direction speed
       analogWrite(PWMPINR, value[1]);  //Control direction speed
+
+      if (targetRad[1] + currentRad[1] < 0.4 && targetRad[0] + currentRad[0] > -0.4){
+        State = 5;
+      }
+
     }
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  } else {
-    desired_speed[0] = rightWheelCirc / desiredTime;
-    desired_speed[1] = leftWheelCirc / desiredTime;
+  } else if (State == 5) {
+    
+    targetRad[1] = (2 * PI) * (rightWheelCirc / wheelCir);
+    targetRad[0] = (2 * PI) * (leftWheelCirc / wheelCir);
+
+    Serial.println(targetRad[0]);
+
+    desired_speed[0] = targetRad[0] / desiredTime;
+    desired_speed[1] = targetRad[1] / desiredTime;
 
     if (reset == 2) {
       encoderCounts[0] = 0;
@@ -232,7 +252,9 @@ void loop() {
       ang_velocity[i] = (pos_rad[i] - last_pos_rad[i]) / (current_time - last_time);  //Calculate angular velocity
 
       error[i] = desired_speed[i] - ang_velocity[i];  //Velocity error
-      value[i] = Kpv * error[i];
+      value[i] = Kp * error[i];
+
+      Serial.println((targetRad[0] / (2 * PI)) * 3200);
 
       if (value[i] < 0) {  //Translate negative pwm value to reversed motor direction
         value[i] *= -1;
@@ -241,7 +263,7 @@ void loop() {
         motor_dir[i] = 1;
       }
 
-      value[i] = value[i] * 32;                //Scale control loop output to PWM
+      //value[i] = value[i] * 32;                //Scale control loop output to PWM
       if (value[i] > 255) { value[i] = 255; }  //Cap PI controller output at 255
 
       analogWrite(PWMPINL, value[0]);  //Control direction speed
@@ -257,6 +279,11 @@ void loop() {
       } else {
         digitalWrite(DIRPINR, LOW);
       }
+    }
+    if (encoderCounts[0] >= 7250){
+      State = 0;
+      analogWrite(PWMPINL, 0);  //Control direction speed
+      analogWrite(PWMPINR, 0);
     }
   }
   //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
