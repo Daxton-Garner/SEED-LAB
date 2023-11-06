@@ -320,6 +320,6 @@ void I2Creceive() {
 
 // Acknowledge pi communication requests
 void I2Crequest() {
-  Wire.write(0);
+  Wire.write(talkToPi);
   reply = talkToPi;
 }
