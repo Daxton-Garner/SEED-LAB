@@ -54,7 +54,7 @@ capture.set(cv.CAP_PROP_FRAME_WIDTH, capWidth)
 si2c = SMBus(1)
 
 # Threading function for LCD screen - improves I2C speed 
-def myFunction():
+def LCDThread():
     # LCD screen initialization
     lcd_columns = 16
     lcd_rows = 2
@@ -65,31 +65,37 @@ def myFunction():
 
     # Loop to find if LCD screen needs to change output
     while True:
-            # START BAILEY ADD
-        i2c.write_byte_data(ARD_ADDR, offset, int(state))  
-        reply = i2c.read_byte_data(ARD_ADDR, state)
-        i2c.read_byte_data(ARD_ADDR, reply)
-        print("Received from Arduino: "+int(reply))
-        lcd.message = "From Arduino\n" + int(reply)
-        lcd.color = [100, 0 ,0]
-        # END BAILEY ADD 
+       
         if change:
             gotSomething = q.get()
-            if(gotSomething != 0):
-                if (Theta < 0):
+            if(gotSomething != 0) and (state == 1):
+                if (theta < 0):
                     lcd.color = [0, 150, 50]
                 else:
                     lcd.color = [50, 0, 50]
-                ToPrint = str(state)
-                lcd.message = ToPrint
+                    ToPrint = str(state)
+                    lcd.message = ToPrint
             else:
                 lcd.color = [255,0,0]
                 lcd.message = "\n"
                 
+def ArduinoComThread(): 
+    while True: 
+
+        if change: 
+            gotSomething = q.get()
+            if(gotSomething != -9):
+                try:
+                    i2c.write_byte_data(ARD_ADDR, offset, int(state))  
+                except IOError:
+                    print("Could not write data toArduino")
 
     
-myThread = threading.Thread(target=myFunction,args=())
+myThread = threading.Thread(target=LCDThread,args=())
 myThread.start()
+
+myThreadTwo = threading.Thread(target=ArduinoComThread,args=())
+myThreadTwo.start()
 
 # Continue this loop until the break at the bottom
 while True:
@@ -109,8 +115,6 @@ while True:
     elif state == 0.5:  # Searching but marker isn't seen yet
         if not ids is None:
             state = 1
-            # BAILEY ADD
-            i2c.write_byte_data(ARD_ADDR, offset, int(state))
             
     elif state == 1:    # Searching but marker is seen
         if not ids is None:
@@ -130,59 +134,53 @@ while True:
             
             if abs(theta) < 1:
                 state = 2
-                # BAILEY ADD
-                i2c.write_byte_data(ARD_ADDR, offset, int(state))
-        else:
-            state = 0
-            # BAILEY ADD
-            #i2c.write_byte_data(ARD_ADDR, offset, int(state))
+
+
     elif state == 2:    # Marker is in the middle of the screen
-        # Calculate where the center of the marker is on the screen (x coordinate)
-        cornersArray = np.array(corners)[0][0]
-        xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
+        if not ids is None:
+            # Calculate where the center of the marker is on the screen (x coordinate)
+            cornersArray = np.array(corners)[0][0]
+            xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
 
-        # Calculate distance
-        center2CenterPix = xCapCent - xMarkCent # Center of capture to center of marker in pixels
-        markWidthPix = (abs(cornersArray[0][0] - cornersArray[1][0]) + abs(cornersArray[2][0] - cornersArray[3][0]))/2
+            # Calculate distance
+            center2CenterPix = xCapCent - xMarkCent # Center of capture to center of marker in pixels
+            markWidthPix = (abs(cornersArray[0][0] - cornersArray[1][0]) + abs(cornersArray[2][0] - cornersArray[3][0]))/2
 
-        distance = 4161.416*(markWidthPix)**(-1.055)    # Marker dstance from camera, centimeters; power interpolation
+            distance = 4161.416*(markWidthPix)**(-1.055)    # Marker dstance from camera, centimeters; power interpolation
 
-        #print("Distance: ", round(distance, 2))
+            #print("Distance: ", round(distance, 2))
 
-        if distance < 30.48:
-            state = 3
-            # BAILEY ADD
-            i2c.write_byte_data(ARD_ADDR, offset, int(state))
-        elif state == 3:
-            if recieved == 0:
-                state = -1
-            elif recieved == 1:
-                state = 4
-            # BAILEY ADD
-            i2c.write_byte_data(ARD_ADDR, offset, int(state))
-        elif state == 4:
-            if recieved == 3:
-                state = 5
-            # BAILEY ADD
-            i2c.write_byte_data(ARD_ADDR, offset, int(state))
-        elif state == 5:
-            if recieved == 5:
-                state = -1
-                # BAILEY ADD
-                #i2c.write_byte_data(ARD_ADDR, offset, int(state))
-
+            if distance < 30.48:
+                state = 3
+           
+    elif state == 3:
+        #if reply == 0:
+            #state = -1
+        if reply == 1:
+            state = 4
+            
+    elif state == 4:
+        if reply == 3:
+            state = 5
+            
+    #elif state == 5:
+        #if reply == 5:
+         #   state = -1
+                
     # Loop to see if state has changed or not
     if (state != stateLast):
         print("State: ", state)
-        #q.put(state)
+        q.put(state)
         change = True
         stateLast = state
 
     else:
         change = False
         stateLast = state
-            
 
+        sleep(0.1)    
+        reply = i2c.read_byte_data(ARD_ADDR, int(state))
+        print("Received from Arduino: ", reply)
 
     # Show the overlay
     cv.imshow("overlay", overlay)
