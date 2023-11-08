@@ -1,7 +1,8 @@
 # SEED Lab - Demo 2 - Computer Vission
-# Purpose: 
-# Method: 
-# Required hardware: LCD screen, camera
+# Purpose: This file assists an Arduino in searching for, detecting, and moving towards an Aruco marker.
+# Method: A state machine is used for each step of the demo, including an intermediate state just for the Pi.
+        #The state machine is outlined in another file in the Demo 2 repository. 
+# Required hardware: LCD screen, camera, Arduino connection
 
 
 # Initialization
@@ -26,7 +27,7 @@ stateLast = -1
 state = 0
 send2Duino = 0
 reply = 0
-stopDist  = 30.48 * 1.5
+stopDist  = 30.48 * 1.5    # Fidge factor, multiply 1 foot by 1.5 for correct stopping distance
 
 # BAILEY ADD FOR COMMS
 ARD_ADDR = 8
@@ -35,7 +36,7 @@ i2c = board.I2C()
 i2c = SMBus(1)
 # END BAILEY ADD 
 
-# Disctionary for aruco generation and detection
+# Dictionary for aruco generation and detection
 myDict = aruco.getPredefinedDictionary(aruco.DICT_6X6_50)
 
 # This code generates markers, uncomment to display a marker
@@ -68,7 +69,8 @@ def LCDThread():
 
     # Loop to find if LCD screen needs to change output
     while True:
-       
+
+        # Commented out sections here for ease of debugging, can add back in later
         if change:
             gotSomething = q.get()
             if(gotSomething != 0) and (state == 1):
@@ -81,7 +83,8 @@ def LCDThread():
             else:
                 lcd.color = [255,0,0]
                 lcd.message = "\n"
-                
+
+# Communication with the Arduino
 def ArduinoComThread(): 
     while True: 
 
@@ -112,20 +115,26 @@ while True:
     overlay = cv.cvtColor(gray, cv.COLOR_GRAY2RGB)
     overlay = aruco.drawDetectedMarkers(overlay,corners,borderColor = 4)
 
-    if state == 0:  # Not searching yet
+    # STATE MACHINE:
+    # Reset state machine when recieved 8 from Arduino
+    
+    # Not searching yet
+    if state == 0:  
         state = 0.5
         send2Duino = 1
         reply = 0
-
-    elif state == 0.5:  # Searching but marker isn't seen yet
+    
+    # Searching but marker isn't seen yet
+    elif state == 0.5:  
         if not ids is None:
             state = 1
             send2Duino = 1
         if reply == 8:
             state = 0
-            
-    elif state == 1:    # Searching but marker is seen
-        if not ids is None:
+
+    # Searching while marker is seen
+    elif state == 1:    
+        if not ids is None:    # Insurance that marker is in screen before calculations start
             # Calculate where the center of the marker is on the screen (x coordinate)
             cornersArray = np.array(corners)[0][0]
             xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
@@ -133,23 +142,21 @@ while True:
             # Calculate theta
             center2CenterPix = xCapCent - xMarkCent # Center of capture to center of marker in pixels
             markWidthPix = (abs(cornersArray[0][0] - cornersArray[1][0]) + abs(cornersArray[2][0] - cornersArray[3][0]))/2
-
             distance = 4161.416*(markWidthPix)**(-1.055)    # Marker dstance from camera, centimeters; power interpolation
             left2Right = markWidthCM * center2CenterPix / markWidthPix  # Left to right distance from center, cm
             theta = 90 - ((math.atan2(distance, left2Right)) * 180 / math.pi)     # Angle from center, degrees
 
-            print("Theta: ", round(theta, 2))
+            #print("Theta: ", round(theta, 2))
 
-            
-            
-            if abs(theta) < 8.5:
+            if abs(theta) < 8.5:    #Includes fudge factor for correct behavior
                 state = 2
                 send2Duino = 2
+        
         if reply == 8:
             state = 0
 
-
-    elif state == 2:    # Marker is in the middle of the screen
+    # Marker is in the middle of the screen
+    elif state == 2:    
         if not ids is None:
             # Calculate where the center of the marker is on the screen (x coordinate)
             cornersArray = np.array(corners)[0][0]
@@ -158,7 +165,6 @@ while True:
             # Calculate distance
             center2CenterPix = xCapCent - xMarkCent # Center of capture to center of marker in pixels
             markWidthPix = (abs(cornersArray[0][0] - cornersArray[1][0]) + abs(cornersArray[2][0] - cornersArray[3][0]))/2
-
             distance = 4161.416*(markWidthPix)**(-1.055)    # Marker dstance from camera, centimeters; power interpolation
 
             #print("Distance: ", round(distance, 2))
@@ -169,7 +175,8 @@ while True:
 
         if reply == 8:
             state = 0
-           
+
+    # The following states are driven by recieved codes from the Arduino
     elif state == 3:
         #if reply == 0:
             #state = -1
@@ -196,12 +203,9 @@ while True:
         q.put(state)
         change = True
         stateLast = state
-
     else:
         change = False
         stateLast = state
-
-        #sleep(0.1)
         try:
             reply = i2c.read_byte_data(ARD_ADDR, int(state))
             print("Received from Arduino: ", reply)
@@ -211,7 +215,6 @@ while True:
             print("Could not read from Arduino")
 
     
-        
     # Show the overlay
     cv.imshow("overlay", overlay)
 
