@@ -24,7 +24,7 @@ volatile uint8_t msgLength = 0;
 
 int talkToPi;
 bool debug = 0;
-float Kp = 50;  // 1.7 was Our gain we found in our insitiall simulink
+float Kp = 60;  // 1.7 was Our gain we found in our insitiall simulink
 float Kpv = 2;
 float Kp_pos = 2;    // The proportional gain
 float Ki_pos = 0;  // the intergral gain
@@ -128,6 +128,7 @@ void setup() {
   // Send data back
   Wire.onRequest(I2Crequest);
   // END BAILEY ADD
+  talkToPi = 8;
 }
 
 void loop() {
@@ -139,11 +140,12 @@ void loop() {
 
   //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   if (State == 1) {
+    talkToPi = 0;
     digitalWrite(DIRPINL, HIGH);   //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
-    analogWrite(PWMPINL, 40);  //Control direction speed
-    analogWrite(PWMPINR, 40);  //Control direction speed
+    analogWrite(PWMPINL, 33);  //Control direction speed
+    analogWrite(PWMPINR, 33);  //Control direction speed
     //value[0] = -20;
     //value[1] = 20;
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -151,8 +153,8 @@ void loop() {
     digitalWrite(DIRPINL, LOW);  //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
-    analogWrite(PWMPINL, 20);  //Control direction speed
-    analogWrite(PWMPINR, 20);  //Control direction speed
+    analogWrite(PWMPINL, 50);  //Control direction speed
+    analogWrite(PWMPINR, 50);  //Control direction speed
                                //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   } else if (State == 3) {
     analogWrite(PWMPINL, 0);  //Control direction speed
@@ -169,7 +171,7 @@ void loop() {
       integral_error[1] = 0;
       pos_rad[0] = 0;
       pos_rad[1] = 0;
-      float targetdeg = 110.0;
+      float targetdeg = 100.0;
       targetrotm = (targetdeg / 360.0) * (wheelDiameter * PI);
       targetRad[1] = (2 * PI) * (targetrotm / wheelCir);
       targetRad[0] = -1 * targetRad[1];
@@ -224,7 +226,8 @@ void loop() {
       analogWrite(PWMPINR, value[1]);  //Control direction speed
 
       if (targetRad[1] + currentRad[1] < 0.4 && targetRad[0] + currentRad[0] > -0.4){
-        State = 5;
+        talkToPi = 3;
+        //State = 5;
       }
 
     }
@@ -234,7 +237,7 @@ void loop() {
     targetRad[1] = (2 * PI) * (rightWheelCirc / wheelCir);
     targetRad[0] = (2 * PI) * (leftWheelCirc / wheelCir);
 
-    Serial.println(targetRad[0]);
+    //Serial.println(targetRad[0]);
 
     desired_speed[0] = targetRad[0] / desiredTime;
     desired_speed[1] = targetRad[1] / desiredTime;
@@ -254,7 +257,7 @@ void loop() {
       error[i] = desired_speed[i] - ang_velocity[i];  //Velocity error
       value[i] = Kp * error[i];
 
-      Serial.println((targetRad[0] / (2 * PI)) * 3200);
+      //Serial.println((targetRad[0] / (2 * PI)) * 3200);
 
       if (value[i] < 0) {  //Translate negative pwm value to reversed motor direction
         value[i] *= -1;
@@ -280,8 +283,8 @@ void loop() {
         digitalWrite(DIRPINR, LOW);
       }
     }
-    if (encoderCounts[0] >= 7250){
-      State = 0;
+    if (encoderCounts[0] >= 7300){
+      State = 9;
       analogWrite(PWMPINL, 0);  //Control direction speed
       analogWrite(PWMPINR, 0);
     }
@@ -301,7 +304,7 @@ void loop() {
     //  Serial.println("");
   }
 
-  //Serial.println(State);
+  Serial.println(State);
 
   last_pos_rad[0] = pos_rad[0];
   last_pos_rad[1] = pos_rad[1];
@@ -325,15 +328,15 @@ void loop() {
 
 //BAILEY ADD START
 void printReceived() {
-  Serial.print("Instruction received:");
+  //Serial.print("Instruction received:");
   State = instruction[0];
-  Serial.print(State);
-  Serial.println("");
+  //Serial.print(State);
+  //Serial.println("");
 }
 
 //Handle I2C reception from pi
 void I2Creceive() {
-  Serial.println("I");
+  //Serial.println("I");
   // offset = Wire.read();
   while (Wire.available()) {
     //rxBuf[rxInd] = Wire.read();

@@ -24,6 +24,9 @@ q = queue.Queue()
 change = False
 stateLast = -1
 state = 0
+send2Duino = 0
+reply = 0
+stopDist  = 30.48 * 1.5
 
 # BAILEY ADD FOR COMMS
 ARD_ADDR = 8
@@ -69,12 +72,12 @@ def LCDThread():
         if change:
             gotSomething = q.get()
             if(gotSomething != 0) and (state == 1):
-                if (theta < 0):
-                    lcd.color = [0, 150, 50]
-                else:
-                    lcd.color = [50, 0, 50]
-                    ToPrint = str(state)
-                    lcd.message = ToPrint
+                #if (theta < 0):
+                    #lcd.color = [0, 150, 50]
+                #else:
+                lcd.color = [50, 0, 50]
+                ToPrint = str(state)
+                lcd.message = ToPrint
             else:
                 lcd.color = [255,0,0]
                 lcd.message = "\n"
@@ -86,7 +89,7 @@ def ArduinoComThread():
             gotSomething = q.get()
             if(gotSomething != -9):
                 try:
-                    i2c.write_byte_data(ARD_ADDR, offset, int(state))  
+                    i2c.write_byte_data(ARD_ADDR, offset, int(send2Duino))  
                 except IOError:
                     print("Could not write data toArduino")
 
@@ -111,10 +114,15 @@ while True:
 
     if state == 0:  # Not searching yet
         state = 0.5
+        send2Duino = 1
+        reply = 0
 
     elif state == 0.5:  # Searching but marker isn't seen yet
         if not ids is None:
             state = 1
+            send2Duino = 1
+        if reply == 8:
+            state = 0
             
     elif state == 1:    # Searching but marker is seen
         if not ids is None:
@@ -130,10 +138,15 @@ while True:
             left2Right = markWidthCM * center2CenterPix / markWidthPix  # Left to right distance from center, cm
             theta = 90 - ((math.atan2(distance, left2Right)) * 180 / math.pi)     # Angle from center, degrees
 
-            #print("Theta: ", round(theta, 2))
+            print("Theta: ", round(theta, 2))
+
             
-            if abs(theta) < 1:
+            
+            if abs(theta) < 8.5:
                 state = 2
+                send2Duino = 2
+        if reply == 8:
+            state = 0
 
 
     elif state == 2:    # Marker is in the middle of the screen
@@ -150,22 +163,32 @@ while True:
 
             #print("Distance: ", round(distance, 2))
 
-            if distance < 30.48:
+            if distance < stopDist:
                 state = 3
+                send2Duino = 3
+
+        if reply == 8:
+            state = 0
            
     elif state == 3:
         #if reply == 0:
             #state = -1
         if reply == 1:
             state = 4
+            send2Duino = 4
+        if reply == 8:
+            state = 0
             
     elif state == 4:
         if reply == 3:
             state = 5
+            send2Duino = 5
+        if reply == 8:
+            state = 0
             
-    #elif state == 5:
-        #if reply == 5:
-         #   state = -1
+    elif state == 5:
+        if reply == 8:
+            state = 0
                 
     # Loop to see if state has changed or not
     if (state != stateLast):
@@ -178,10 +201,17 @@ while True:
         change = False
         stateLast = state
 
-        sleep(0.1)    
-        reply = i2c.read_byte_data(ARD_ADDR, int(state))
-        print("Received from Arduino: ", reply)
+        #sleep(0.1)
+        try:
+            reply = i2c.read_byte_data(ARD_ADDR, int(state))
+            print("Received from Arduino: ", reply)
+            #if reply == 8:
+                #state = 0
+        except IOError:
+            print("Could not read from Arduino")
 
+    
+        
     # Show the overlay
     cv.imshow("overlay", overlay)
 
