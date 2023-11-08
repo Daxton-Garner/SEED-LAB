@@ -13,7 +13,10 @@ present in each folder, detailing the capabilities of the assignment as well
 as a short description of each file within the folder.
 
 Contents of Repository:
-  Assignment 2 - Localization: Code for Localization 2B assignment
+  Assignment 2 - Code for Assignment 2
   Mini Project: Code for mini project
+  Demo 1 - Code for Demo 1 and presentation
+  Demo 2 - Code for Demo 2 and state machine diagram
+  
 
 
