@@ -4,6 +4,12 @@ Demo 2
   Pi: Phase machine determining marker position (angle and distance)
   This demo contains a method for the robot to search for a marker, approach the marker, and make a circle around the marker.
 
+Task Distribution
+  Trevor Wolf: 
+  Daxton Garner: 
+  Bailey Oteri: Communications with arduino
+  Jordie Weber: Computer vision and state machine
+
 Files in the Demo 1 Folder:
   Demo2Arduino: File containing Arduino code
   Demo2PI: Raspberry pi code
