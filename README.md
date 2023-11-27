@@ -17,6 +17,7 @@ Contents of Repository:
   Mini Project: Code for mini project
   Demo 1 - Code for Demo 1 and presentation
   Demo 2 - Code for Demo 2 and state machine diagram
+  Final Demo - Updated code for demo 2 that we will use for Final Demo
   
 
 
