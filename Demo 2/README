@@ -2,9 +2,10 @@
 Demo 2
   Arduino: Move according to the states given by Pi calculations
   Pi: Phase machine determining marker position (angle and distance)
+  This demo contains a method for the robot to search for a marker, approach the marker, and make a circle around the marker.
 
 Files in the Demo 1 Folder:
-  Demo2Arduinor: Arduino code
+  Demo2Arduino: File containing Arduino code
   Demo2PI: Raspberry pi code
   README: This
   statemachine: State Machine Diagram
