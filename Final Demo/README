@@ -4,4 +4,14 @@ For more details and a full readme for the final demo - demo 2 code, enter the F
 
 Folder contents:
   FinalDemo2 - Folder containing code for demo 2 used for final
-  FinalDemoArduino - Test code
+  FinalDemoArduino - This houses our arduino code that runs the controls and localization of our robot throught the whole demo
+
+
+Arduino:
+  This code has a state machine that has 7 different states. The code starts by using I2C to listen to what state the PI is wanting the 
+robot to be in. State 1 has the wheel turn opposite of eachother to make McSEED rotate CCW so the camera can find and detect the marker. 
+One the marker is striaght in front of the robot we switch to state 2 which cause the wheel is move straight forward, whener the robot gets 
+off course the PI will either send a state 6 to vear left or 7 for right. Once it gets within a foot of the marker the Pi sends it a state 3
+Which has the arduino tell the PI what state it wants to be in by setting "TalktoPi = 1." This then allows the state to be turned to 4 and 
+has the arduino use our PI controler to turn 90 degrees CW. Once compelted we make "TalktoPi = 2," allowing the state to become 5. The fifth
+state has it opperate a perfect 
