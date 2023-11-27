@@ -1,0 +1,28 @@
+
+Demo 2
+  Arduino: Move according to the states given by Pi calculations
+  Pi: Phase machine determining marker position (angle and distance)
+  This demo contains a method for the robot to search for a marker, approach the marker, and make a circle around the marker.
+
+Task Distribution
+  Trevor Wolf: 
+  Daxton Garner: 
+  Bailey Oteri: Communications with arduino
+  Jordie Weber: Computer vision and state machine
+
+Files in the Demo 1 Folder:
+  Demo2Arduino: File containing Arduino code
+  Demo2PI: Raspberry pi code
+  README: This
+  statemachine: State Machine Diagram
+
+
+Pi:
+  The Code uses a state machine to communicate to the Arduino what movements to make next. The machine starts in state
+  0.5, where the Arduino will move the robot around to an angle where the marker can be seen. Once the marker is detected
+  by the pi, the state is changed to state 1 and the Arduino continues moving in the same way. Once the marker is in the
+  center of the screen, the state is changed to 3 and the robot will move forward until it is within 1 foot of the marker.
+  At this point, control is then in the hands of the Arduino to either stop or circle around the marker. Throughout this
+  process, the arduino and pi are sending number codes to ensure correct states and movement between states.
+
+Arduino:
