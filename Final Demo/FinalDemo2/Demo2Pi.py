@@ -1,7 +1,9 @@
 # SEED Lab - Demo 2 - Computer Vission
-# Purpose: 
-# Method: 
-# Required hardware: LCD screen, camera
+# Purpose: State machine and calculations for demo 2.
+# Method: This code communicates with the arduino and tells it which state the bot is in so that
+#           the robot moves as desired. The pi uses computer vision to tell the arduino how far
+#           away the marker is from the camera and what angle it is at in the camera.
+# Required hardware: Camera, connection to Arduino.
 
 
 # Initialization
@@ -26,24 +28,18 @@ stateLast = -1
 state = 0
 send2Duino = 0
 reply = 0
-stopDist  = 30.48 * 1.5
+stopDist  = 30.48 * 1.5     # Multiply by 1.5 for fudge factor
 loopCount = 0
 
-# BAILEY ADD FOR COMMS
+# Communication variables
 ARD_ADDR = 8
 offset = 1
 i2c = board.I2C()
-i2c = SMBus(1)
-# END BAILEY ADD 
+i2c = SMBus(1) 
 
-# Disctionary for aruco generation and detection
+
+# Dictionary for aruco generation and detection
 myDict = aruco.getPredefinedDictionary(aruco.DICT_6X6_50)
-
-# This code generates markers, uncomment to display a marker
-#myAruco = aruco.GridBoard((1,1),4.0,1.0,myDict)
-#myArucoImg = myAruco.generateImage((500,500))
-#cv.imshow("myArucoImg",myArucoImg)
-#cv.imwrite("Aruco.jpg", myArucoImg)
 
 # Capture from the camera plugged into the Pi
 capture = cv.VideoCapture(0)
@@ -59,40 +55,13 @@ capture.set(cv.CAP_PROP_FRAME_WIDTH, capWidth)
 ret, frame = capture.read()
 capture.set(cv.CAP_PROP_AUTO_EXPOSURE, 3)
 capture.set(cv.CAP_PROP_AUTO_EXPOSURE, 1)
-
 capture.set(cv.CAP_PROP_BRIGHTNESS, 250)
-
 capture.set(cv.CAP_PROP_EXPOSURE, 39) #5, 9, 10, 19, 20, 39
 #End Camera Tweaks
 
 si2c = SMBus(1)
 
-# Threading function for LCD screen - improves I2C speed 
-#def LCDThread():
-    # LCD screen initialization
-    #lcd_columns = 16
-    #lcd_rows = 2
-    #i2c = board.I2C()
-    #lcd = character_lcd.Character_LCD_RGB_I2C(i2c, lcd_columns, lcd_rows)
-    #lcd.color = [50, 0, 50]
-    #lcd.clear()
-
-    # Loop to find if LCD screen needs to change output
-   # while True:
-       
-        #if change:
-        #    gotSomething = q.get()
-        #    if(gotSomething != 0) and (state == 1):
-        #        #if (theta < 0):
-                    #lcd.color = [0, 150, 50]
-                #else:
-         #       lcd.color = [50, 0, 50]
-         #       ToPrint = str(state)
-         #       lcd.message = ToPrint
-          #  else:
-           #     lcd.color = [255,0,0]
-           #     lcd.message = "\n"
-                
+# Threading for arduino communication     
 def ArduinoComThread(): 
     while True: 
 
@@ -104,12 +73,9 @@ def ArduinoComThread():
                 except IOError:
                     print("Could not write data toArduino")
 
-    
-#myThread = threading.Thread(target=LCDThread,args=())
-#myThread.start()
-
 myThreadTwo = threading.Thread(target=ArduinoComThread,args=())
 myThreadTwo.start()
+
 
 # Continue this loop until the break at the bottom
 while True:
@@ -123,19 +89,22 @@ while True:
     overlay = cv.cvtColor(gray, cv.COLOR_GRAY2RGB)
     overlay = aruco.drawDetectedMarkers(overlay,corners,borderColor = 4)
 
-    if state == 0:  # Not searching yet
+    # Not searching yet
+    if state == 0:  
         state = 0.5
         send2Duino = 1
         reply = 0
 
-    elif state == 0.5:  # Searching but marker isn't seen yet
+    # Searching but marker isn't seen yet
+    elif state == 0.5:  
         if not ids is None:
             state = 1
             send2Duino = 1
         if reply == 8:
             state = 0
-            
-    elif state == 1:    # Searching but marker is seen
+
+    # Searching but marker is seen
+    elif state == 1:    
         if not ids is None:
             # Calculate where the center of the marker is on the screen (x coordinate)
             cornersArray = np.array(corners)[0][0]
@@ -149,15 +118,15 @@ while True:
             left2Right = markWidthCM * center2CenterPix / markWidthPix  # Left to right distance from center, cm
             theta = 90 - ((math.atan2(distance, left2Right)) * 180 / math.pi)     # Angle from center, degrees
 
-            print("Theta: ", round(theta, 2))
+            #print("Theta: ", round(theta, 2))
 
-            
+            # When the marker is within 15deg, go to next state
             if abs(theta) < 15:
                 state = 2
                 send2Duino = 2
+                
         if reply == 8:
             state = 0
-
 
     elif state == 2:    # Marker is in the middle of the screen
         if not ids is None:
@@ -168,13 +137,13 @@ while True:
             # Calculate distance
             center2CenterPix = xCapCent - xMarkCent # Center of capture to center of marker in pixels
             markWidthPix = (abs(cornersArray[0][0] - cornersArray[1][0]) + abs(cornersArray[2][0] - cornersArray[3][0]))/2
-
             distance = 4161.416*(markWidthPix)**(-1.055)    # Marker dstance from camera, centimeters; power interpolation
             left2Right = markWidthCM * center2CenterPix / markWidthPix  # Left to right distance from center, cm
             theta = 90 - ((math.atan2(distance, left2Right)) * 180 / math.pi)     # Angle from center, degrees
 
             #print("Distance: ", round(distance, 2))
 
+            # When the marker is within the stop distance then go to next state
             if distance < stopDist:
                 state = 3
                 send2Duino = 3
@@ -190,10 +159,9 @@ while True:
 
         if reply == 8:
             state = 0
-           
+
+# These next states are handled by the arduino, this is just for changing states
     elif state == 3:
-        #if reply == 0:
-            #state = -1
         if reply == 1:
             state = 4
             send2Duino = 4
@@ -214,7 +182,7 @@ while True:
                 
     # Loop to see if state has changed or not
     if (state != stateLast):
-        print("State: ", state)
+        #print("State: ", state)
         q.put(state)
         change = True
         stateLast = state
@@ -225,13 +193,12 @@ while True:
 
         loopCount += 1
         if (loopCount > 10):
-            #sleep(0.1)
             loopCount = 0
             try:
                 reply = i2c.read_byte_data(ARD_ADDR, int(state))
-                print("Received from Arduino: ", reply)
+                #print("Received from Arduino: ", reply)
             except IOError:
-                print("Could not read from Arduino")
+                #print("Could not read from Arduino")
 
     
     # Show the overlay
