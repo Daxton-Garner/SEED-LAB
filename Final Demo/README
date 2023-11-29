@@ -1,8 +1,9 @@
 This folder contains demo 2 code we will use for the final demo, as well as some test code for the actual final demo project.
 
 Folder contents:
-  FinalDemo2 - Folder containing updated code for demo 2 used for final
-  FinalDemoArduino - This houses our arduino code that runs the controls and localization of our robot throught the whole demo
+  FinalDemo2: Folder containing updated code for demo 2 used for final
+  FinalDemoArduino: This houses our arduino code that runs the controls and localization of our robot throught the whole demo
+  ReadMe: This
 
 Method:
   Arduino: Move according to the states given by Pi calculations
@@ -12,7 +13,6 @@ Method:
 Files in the FinalDemo2 Folder:
   Demo2Arduino: File containing Arduino code
   Demo2PI: Raspberry pi code
-  README: This
   statemachine: State Machine Diagram
 
 Task Distribution
