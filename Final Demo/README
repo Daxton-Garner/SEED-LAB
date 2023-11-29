@@ -1,18 +1,41 @@
-This folder contains demo 2 code we will use for the final demo, as well as some test code for the actual
-  final demo project.
-For more details and a full readme for the final demo - demo 2 code, enter the FinalDemo2 folder.
+This folder contains demo 2 code we will use for the final demo, as well as some test code for the actual final demo project.
 
 Folder contents:
-  FinalDemo2 - Folder containing code for demo 2 used for final
+  FinalDemo2 - Folder containing updated code for demo 2 used for final
   FinalDemoArduino - This houses our arduino code that runs the controls and localization of our robot throught the whole demo
 
+Method:
+  Arduino: Move according to the states given by Pi calculations
+  Pi: Phase machine determining marker position (angle and distance)
+  This demo contains a method for the robot to search for a marker, approach the marker, and make a circle around the marker.
+
+Files in the FinalDemo2 Folder:
+  Demo2Arduino: File containing Arduino code
+  Demo2PI: Raspberry pi code
+  README: This
+  statemachine: State Machine Diagram
+
+Task Distribution
+  Trevor Wolf: Harware Design, localization
+  Daxton Garner: Control
+  Bailey Oteri: Communications with arduino
+  Jordie Weber: Computer vision and state machine
+
+Pi:
+  The Code uses a state machine to communicate to the Arduino what movements to make next. The machine starts in state
+  0.5, where the Arduino will move the robot around to an angle where the marker can be seen. Once the marker is detected
+  by the pi, the state is changed to state 1 and the Arduino continues moving in the same way. Once the marker is in the
+  center of the screen, the state is changed to 3 and the robot will move forward until it is within 1 foot of the marker.
+  At this point, control is then in the hands of the Arduino to either stop or circle around the marker. Throughout this
+  process, the arduino and pi are sending number codes to ensure correct states and movement between states.
 
 Arduino:
-  This code has a state machine that has 7 different states. The code starts by using I2C to listen to what state the PI is wanting the 
-robot to be in. State 1 has the wheel turn opposite of eachother to make McSEED rotate CCW so the camera can find and detect the marker. 
-One the marker is striaght in front of the robot we switch to state 2 which cause the wheel is move straight forward, whener the robot gets 
-off course the PI will either send a state 6 to vear left or 7 for right. Once it gets within a foot of the marker the Pi sends it a state 3
-Which has the arduino tell the PI what state it wants to be in by setting "TalktoPi = 1." This then allows the state to be turned to 4 and 
-has the arduino use our PI controler to turn 90 degrees CW. Once compelted we make "TalktoPi = 2," allowing the state to become 5. The fifth
-state has it opperate a perfect 1.2 radius circle around the marker. All the control here is predetermined speeds and encouder counts to make 
-it stop at the right time.
+  This code has a state machine that has 7 different states. The code starts by using I2C to listen to what state the PI 
+  is wanting the robot to be in. State 1 has the wheel turn opposite of eachother to make McSEED rotate CCW so the camera 
+  can find and detect the marker. One the marker is striaght in front of the robot we switch to state 2 which cause the 
+  wheel is move straight forward, whener the robot gets off course the PI will either send a state 6 to vear left or 7 for 
+  right. Once it gets within a foot of the marker the Pi sends it a state 3 which has the arduino tell the PI what state it
+  wants to be in by setting "TalktoPi = 1." This then allows the state to be turned to 4 and has the arduino use our PI 
+  controler to turn 90 degrees CW. Once compelted we make "TalktoPi = 2," allowing the state to become 5. The fifth state 
+  has it opperate a perfect 1.2 radius circle around the marker. All the control here is predetermined speeds and encouder 
+  counts to make it stop at the right time.
