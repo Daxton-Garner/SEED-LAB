@@ -1,5 +1,5 @@
-//Description: This code is what controls the wheel to turn to the specific angle requested using the
-//             motors current position and some PI controllers to manage the rise time and overshoot.
+//Description: This code is what controls what state the wheels are in. This is done by communicating
+//             with the Raspberry Pi to find a circle a Marker
 //Hardware:    You will need an Arduino Uno connected to a motor, a voltage monitor, and Raspberry Pi.
 //             The motor should have a wheel attached and the Raspberry Pi will need a camera.
 
@@ -147,8 +147,8 @@ void loop() {
     digitalWrite(DIRPINL, HIGH);   //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
-    analogWrite(PWMPINL, 20);  //Control direction speed
-    analogWrite(PWMPINR, 20);  //Control direction speed
+    analogWrite(PWMPINL, 35);  //Control direction speed
+    analogWrite(PWMPINR, 35);  //Control direction speed
 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   } else if (State == 6) {
@@ -190,7 +190,7 @@ void loop() {
       integral_error[1] = 0;
       pos_rad[0] = 0;
       pos_rad[1] = 0;
-      float targetdeg = 100.0;
+      float targetdeg = 90.0;
       targetrotm = (targetdeg / 360.0) * (wheelDiameter * PI);
       targetRad[1] = (2 * PI) * (targetrotm / wheelCir);
       targetRad[0] = -1 * targetRad[1];
@@ -285,7 +285,6 @@ void loop() {
         motor_dir[i] = 1;
       }
 
-      //value[i] = value[i] * 32;                //Scale control loop output to PWM
       if (value[i] > 255) { value[i] = 255; }  //Cap PI controller output at 255
 
       analogWrite(PWMPINL, value[0]);  //Control direction speed
@@ -302,7 +301,7 @@ void loop() {
         digitalWrite(DIRPINR, LOW);
       }
     }
-    if (encoderCounts[0] >= (7500)){
+    if (encoderCounts[0] >= (7450)){
       State = 9;
       analogWrite(PWMPINL, 0);  //Control direction speed
       analogWrite(PWMPINR, 0);
