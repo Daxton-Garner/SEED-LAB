@@ -151,7 +151,7 @@ void loop() {
     analogWrite(PWMPINR, 20);  //Control direction speed
 
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  } else if (State == 6) {
+  } else if (State == 7) {
 
     digitalWrite(DIRPINL, LOW);  //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
@@ -159,7 +159,7 @@ void loop() {
     analogWrite(PWMPINL, 100);  //Control direction speed
     analogWrite(PWMPINR, 110);  //Control direction speed
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  } else if (State == 7) {
+  } else if (State == 6) {
 
     digitalWrite(DIRPINL, LOW);  //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
