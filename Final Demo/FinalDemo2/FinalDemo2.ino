@@ -156,7 +156,7 @@ void loop() {
     digitalWrite(DIRPINL, LOW);  //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
-    analogWrite(PWMPINL, 100);  //Control direction speed
+    analogWrite(PWMPINL, 50);  //Control direction speed
     analogWrite(PWMPINR, 110);  //Control direction speed
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   } else if (State == 7) {
@@ -165,7 +165,7 @@ void loop() {
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
     analogWrite(PWMPINL, 110);  //Control direction speed
-    analogWrite(PWMPINR, 100);  //Control direction speed
+    analogWrite(PWMPINR, 50);  //Control direction speed
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   } else if (State == 2) {
 
@@ -302,9 +302,10 @@ void loop() {
         digitalWrite(DIRPINR, LOW);
       }
     }
-    if (encoderCounts[0] >= (7500)){
+    if (encoderCounts[0] >= (7400)){
       State = 9;
-      analogWrite(PWMPINL, 0);  //Control direction speed
+      talkToPi = 9;
+      analogWrite(PWMPINL, 0);  //Stop
       analogWrite(PWMPINR, 0);
     }
   }
