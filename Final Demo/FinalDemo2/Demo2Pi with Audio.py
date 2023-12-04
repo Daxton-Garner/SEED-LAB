@@ -31,6 +31,9 @@ send2Duino = 0
 reply = 0
 stopDist  = 30.48 * 1.5     # Multiply by 1.5 for fudge factor
 loopCount = 0
+Flag = False
+FlagLast = False
+Kachow = False
 
 # Communication variables
 ARD_ADDR = 8
@@ -97,9 +100,9 @@ while True:
         reply = 0
         pygame.mixer.init()
         pygame.mixer.music.load("Life is a Highway.mp3")
+        pygame.mixer.music.set_volume(0.5)
         pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy() == True:
-            continue
+
 
     # Searching but marker isn't seen yet
     elif state == 0.5:  
@@ -125,9 +128,10 @@ while True:
             theta = 90 - ((math.atan2(distance, left2Right)) * 180 / math.pi)     # Angle from center, degrees
 
             #print("Theta: ", round(theta, 2))
+            #print(theta)
 
             # When the marker is within 15deg, go to next state
-            if abs(theta) < 15:
+            if abs(theta) < 5:
                 state = 2
                 send2Duino = 2
                 
@@ -135,6 +139,7 @@ while True:
             state = 0
 
     elif state == 2:    # Marker is in the middle of the screen
+        send2Duino = 2
         if not ids is None:
             # Calculate where the center of the marker is on the screen (x coordinate)
             cornersArray = np.array(corners)[0][0]
@@ -149,22 +154,87 @@ while True:
 
             #print("Distance: ", round(distance, 2))
 
+            #print(theta)
+
+            # Go back to search state if we can't see the id anymore
+            if abs(theta) > 5:
+                if theta < 0:
+                    state = 6
+                    send2Duino = 6
+                if theta > 0:
+                    state = 7
+                    send2Duino = 7
+
             # When the marker is within the stop distance then go to next state
             if distance < stopDist:
                 state = 3
                 send2Duino = 3
 
-        # Go back to search state if we can't see the id anymore
-        if abs(theta > 18):
-            if theta < 0:
-                state = 0.5
-                send2Duino = 6
-            if theta > 0:
-                state = 0.5
-                send2Duino = 7
+            if reply == 8:
+                state = 0
 
+    # State for angle - deg
+    elif state == 6:
+        if not ids is None:
+            # Calculate where the center of the marker is on the screen (x coordinate)
+            cornersArray = np.array(corners)[0][0]
+            xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
+
+            # Calculate distance
+            center2CenterPix = xCapCent - xMarkCent # Center of capture to center of marker in pixels
+            markWidthPix = (abs(cornersArray[0][0] - cornersArray[1][0]) + abs(cornersArray[2][0] - cornersArray[3][0]))/2
+            distance = 4161.416*(markWidthPix)**(-1.055)    # Marker dstance from camera, centimeters; power interpolation
+            left2Right = markWidthCM * center2CenterPix / markWidthPix  # Left to right distance from center, cm
+            theta = 90 - ((math.atan2(distance, left2Right)) * 180 / math.pi)     # Angle from center, degrees
+
+            #print(theta)
+            #print(send2Duino)
+
+            if distance < stopDist:
+                state = 3
+                send2Duino = 3
+        
+            if theta > -5:
+                send2Duino = 2
+                state = 2
+            #else:
+                #state = 6
+                #send2Duino= 6
+                
         if reply == 8:
             state = 0
+
+    # State for angle + deg
+    elif state == 7:
+        if not ids is None:
+            # Calculate where the center of the marker is on the screen (x coordinate)
+            cornersArray = np.array(corners)[0][0]
+            xMarkCent = (cornersArray[0][0] + cornersArray[1][0] + cornersArray[2][0] + cornersArray[3][0]) / 4 
+
+            # Calculate distance
+            center2CenterPix = xCapCent - xMarkCent # Center of capture to center of marker in pixels
+            markWidthPix = (abs(cornersArray[0][0] - cornersArray[1][0]) + abs(cornersArray[2][0] - cornersArray[3][0]))/2
+            distance = 4161.416*(markWidthPix)**(-1.055)    # Marker dstance from camera, centimeters; power interpolation
+            left2Right = markWidthCM * center2CenterPix / markWidthPix  # Left to right distance from center, cm
+            theta = 90 - ((math.atan2(distance, left2Right)) * 180 / math.pi)     # Angle from center, degrees
+
+            #print(theta)
+            #print(send2Duino)
+
+            if distance < stopDist:
+                state = 3
+                send2Duino = 3
+
+            if theta < 5:
+                send2Duino = 2
+                state = 2
+            #else:
+                #state = 7
+                #send2Duino= 7
+            
+        if reply == 8:
+            state = 0
+
 
 # These next states are handled by the arduino, this is just for changing states
     elif state == 3:
@@ -180,31 +250,25 @@ while True:
             send2Duino = 5
         if reply == 8:
             state = 0
-        pygame.mixer.init()
-        pygame.mixer.music.load("Car Sound.mp3")
-        pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy() == True:
-            continue    
 
     elif state == 5:
-        pygame.mixer.init()
-        pygame.mixer.music.load("Kachow.mp3")
-        pygame.mixer.music.play()
-        while pygame.mixer.music.get_busy() == True:
-            continue
-    
         if reply == 8:
             state = 0
-
-
+        if reply == 9:
+            Flag = True
+            print(reply)
+        
+    if Kachow == True:
+        pygame.mixer.music.load("Kachow.mp3")
+        pygame.mixer.music.play()
+        pygame.mixer.music.set_volume(1.0)
                 
     # Loop to see if state has changed or not
     if (state != stateLast):
-        #print("State: ", state)
-        q.put(state)
+        print("State: ", state)
+        q.put(send2Duino)
         change = True
         stateLast = state
-
     else:
         change = False
         stateLast = state
@@ -216,9 +280,15 @@ while True:
                 reply = i2c.read_byte_data(ARD_ADDR, int(state))
                 #print("Received from Arduino: ", reply)
             except IOError:
-                #print("Could not read from Arduino")
-
-    
+                print("Could not read from Arduino")
+                
+    if (Flag != FlagLast):
+        Kachow =True
+        FlagLast = Flag
+    else:
+        Kachow = False
+        FlagLast = Flag
+        
     # Show the overlay
     cv.imshow("overlay", overlay)
 
