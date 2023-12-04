@@ -16,11 +16,9 @@
 #define PIN4 4
 #define MY_ADDR 8
 
-// START BAILEY ADD
 volatile uint8_t instruction[32] = { 0 };
 volatile uint8_t reply = 0;
 volatile uint8_t msgLength = 0;
-// END BAILEY ADD
 
 int talkToPi;
 bool debug = 0;
@@ -120,7 +118,6 @@ void setup() {
   pinMode(PIN4, OUTPUT);
   digitalWrite(PIN4, HIGH);
 
-  //START BAILEY ADD
   //We want to control the built-in LED (pin 13)
   pinMode(LED_BUILTIN, OUTPUT);
   // Initialize I2C
@@ -129,7 +126,6 @@ void setup() {
   Wire.onReceive(I2Creceive);
   // Send data back
   Wire.onRequest(I2Crequest);
-  // END BAILEY ADD
   talkToPi = 8;
 
   Serial.println(3200 * (leftWheelCirc / wheelCir));
@@ -337,18 +333,15 @@ void loop() {
   last_time_ms = millis();
   last_time = current_time;
 
-  //BAILEY ADD START
   // If there is data on the buffer, read it
   if (msgLength > 0) {
     digitalWrite(LED_BUILTIN, instruction[0]);
     printReceived();
     msgLength = 0;
   }
-  //BAILEY ADD END
 }  //End Loop
 
 
-//BAILEY ADD START
 void printReceived() {
   //Serial.print("Instruction received:");
   State = instruction[0];
