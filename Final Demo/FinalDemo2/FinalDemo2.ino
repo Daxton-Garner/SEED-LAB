@@ -37,6 +37,7 @@ int State = 0;
 int returnState;
 int reset = 1;
 int Demo = 2;
+int goBack = 1;
 
 float wheelCir = 0.471;
 float wheelDiameter = 0.345;
@@ -142,7 +143,7 @@ void loop() {
   current_time = (float)(last_time_ms - start_time_ms) / 1000;  //Current time (sec)
 
   //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
-  if (State == 1) {
+  if (State == 1 && goBack == 1) {
     talkToPi = 0;
     digitalWrite(DIRPINL, HIGH);   //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
@@ -156,19 +157,21 @@ void loop() {
     digitalWrite(DIRPINL, LOW);  //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
-    analogWrite(PWMPINL, 100);  //Control direction speed
-    analogWrite(PWMPINR, 110);  //Control direction speed
+    analogWrite(PWMPINL, 55);  //Control direction speed
+    analogWrite(PWMPINR, 80);  //Control direction speed
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   } else if (State == 6) {
 
     digitalWrite(DIRPINL, LOW);  //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
-    analogWrite(PWMPINL, 110);  //Control direction speed
-    analogWrite(PWMPINR, 100);  //Control direction speed
+    analogWrite(PWMPINL, 80);  //Control direction speed
+    analogWrite(PWMPINR, 55);  //Control direction speed
     //----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
   } else if (State == 2) {
-
+    if (goBack == 1){
+      goBack = 2;
+    }
     digitalWrite(DIRPINL, LOW);  //Control direction
     digitalWrite(DIRPINR, HIGH);  //Control direction
 
@@ -190,7 +193,7 @@ void loop() {
       integral_error[1] = 0;
       pos_rad[0] = 0;
       pos_rad[1] = 0;
-      float targetdeg = 100.0;
+      float targetdeg = 90.0;
       targetrotm = (targetdeg / 360.0) * (wheelDiameter * PI);
       targetRad[1] = (2 * PI) * (targetrotm / wheelCir);
       targetRad[0] = -1 * targetRad[1];
@@ -302,9 +305,9 @@ void loop() {
         digitalWrite(DIRPINR, LOW);
       }
     }
-    if (encoderCounts[0] >= (7500)){
+    if (encoderCounts[0] >= (7400)){
       State = 9;
-      analogWrite(PWMPINL, 0);  //Control direction speed
+      analogWrite(PWMPINL, 0);  //Stop
       analogWrite(PWMPINR, 0);
     }
   }
