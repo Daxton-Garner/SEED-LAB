@@ -306,7 +306,7 @@ void loop() {
       }
     }
     if (encoderCounts[0] >= (7400)){
-      State = 9;
+      talkToPi = 9;
       analogWrite(PWMPINL, 0);  //Stop
       analogWrite(PWMPINR, 0);
     }
